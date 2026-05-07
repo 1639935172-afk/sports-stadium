@@ -2,16 +2,35 @@ from django import forms
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 
+from .models import UserRole
 
 DEV_VERIFICATION_CODE = '123456'
+DEV_STADIUM_ADMIN_REGISTRATION_CODE = 'STADIUM123'
 
 
 class RegistrationForm(forms.Form):
+    role = forms.ChoiceField(
+        label='注册身份',
+        required=False,
+        initial=UserRole.ORDINARY,
+        choices=[
+            (UserRole.ORDINARY, '普通用户'),
+            (UserRole.STADIUM_ADMIN, '场馆管理员'),
+        ],
+    )
     phone_number = forms.CharField(label='手机号', max_length=20)
     nickname = forms.CharField(label='昵称', max_length=50, required=False)
     password1 = forms.CharField(label='密码', widget=forms.PasswordInput)
     password2 = forms.CharField(label='确认密码', widget=forms.PasswordInput)
     verification_code = forms.CharField(label='验证码', max_length=6)
+
+    stadium_admin_registration_code = forms.CharField(
+        label='场馆管理员注册码',
+        max_length=20,
+        required=False,
+        widget=forms.PasswordInput,
+        help_text='注册场馆管理员时必填。',
+    )
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data['phone_number'].strip()
@@ -31,8 +50,12 @@ class RegistrationForm(forms.Form):
         cleaned_data = super().clean()
         password1 = cleaned_data.get('password1')
         password2 = cleaned_data.get('password2')
+        role = cleaned_data.get('role')
+        stadium_admin_registration_code = cleaned_data.get('stadium_admin_registration_code', '').strip()
         if password1 and password2 and password1 != password2:
             self.add_error('password2', '两次输入的密码不一致')
+        if role == UserRole.STADIUM_ADMIN and stadium_admin_registration_code != DEV_STADIUM_ADMIN_REGISTRATION_CODE:
+            self.add_error('stadium_admin_registration_code', '场馆管理员注册码不正确')
         return cleaned_data
 
     def save(self):
@@ -40,6 +63,7 @@ class RegistrationForm(forms.Form):
             phone_number=self.cleaned_data['phone_number'],
             password=self.cleaned_data['password1'],
             nickname=self.cleaned_data.get('nickname', ''),
+            role=self.cleaned_data.get('role', UserRole.ORDINARY),
         )
 
 

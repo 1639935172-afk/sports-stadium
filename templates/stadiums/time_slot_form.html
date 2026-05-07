@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <p>{{ field.stadium.name }} / {{ field.number }}</p>
+
+  <form method="post" class="panel">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul class="errors">
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% for form_field in form %}
+      <div class="field">
+        {{ form_field.label_tag }}
+        {{ form_field }}
+        {% if form_field.errors %}
+          <ul class="errors">
+            {% for error in form_field.errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button class="button" type="submit">保存</button>
+    <a href="{% url 'stadiums:time_slot_list' field.pk %}">取消</a>
+  </form>
+{% endblock %}

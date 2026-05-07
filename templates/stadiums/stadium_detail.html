@@ -11,6 +11,36 @@
     <p><strong>简介</strong>{{ stadium.information|default:"暂无简介" }}</p>
   </section>
 
+  <h2>可用场地</h2>
+  {% if fields %}
+    <section class="grid" aria-label="可用场地列表">
+      {% for field in fields %}
+        <article class="item">
+          <strong>{{ field.number }}</strong>
+          <span>类型：{{ field.field_type }}</span><br>
+          <span>价格：{{ field.price_per_hour }} 元/小时</span>
+          {% if field.available_time_slots %}
+            <div class="actions">
+              {% for slot in field.available_time_slots %}
+                <span>{{ slot.date|date:"Y-m-d" }} {{ slot.start_time|time:"H:i" }}-{{ slot.end_time|time:"H:i" }}</span>
+                {% if request.user.is_authenticated and request.user.is_ordinary_user %}
+                  <form method="post" action="{% url 'reservations:create' slot.pk %}">
+                    {% csrf_token %}
+                    <button class="button" type="submit">预约</button>
+                  </form>
+                {% elif not request.user.is_authenticated %}
+                  <a href="{% url 'accounts:login' %}">登录后预约</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <p>当前暂无可用场地。</p>
+  {% endif %}
+
   <div class="actions">
     <a href="{% url 'stadiums:list' %}">返回场馆列表</a>
   </div>

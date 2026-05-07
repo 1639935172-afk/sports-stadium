@@ -29,6 +29,7 @@
       {% endfor %}
       <p class="hint">开发验证码：{{ dev_verification_code }}</p>
       <button class="button" type="submit">注册</button>
+      <p class="hint">场馆管理员开发注册码：{{ dev_stadium_admin_registration_code }}</p>
     </form>
     <p class="hint">已有账号？<a href="{% url 'accounts:login' %}">去登录</a></p>
   </div>

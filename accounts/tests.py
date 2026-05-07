@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .forms import DEV_VERIFICATION_CODE
+from .forms import DEV_STADIUM_ADMIN_REGISTRATION_CODE, DEV_VERIFICATION_CODE
 from .models import UserRole
 from .permissions import is_ordinary_user, is_stadium_admin, is_system_admin
 
@@ -87,6 +87,42 @@ class AuthFlowTests(TestCase):
         user = get_user_model().objects.get(phone_number='13200000000')
         self.assertEqual(user.nickname, '新用户')
         self.assertEqual(str(self.client.session['_auth_user_id']), str(user.pk))
+
+    def test_register_can_create_stadium_admin_with_registration_code(self):
+        response = self.client.post(
+            reverse('accounts:register'),
+            {
+                'role': UserRole.STADIUM_ADMIN,
+                'phone_number': '13200000006',
+                'nickname': 'Stadium Admin',
+                'password1': 'StrongPass123',
+                'password2': 'StrongPass123',
+                'verification_code': DEV_VERIFICATION_CODE,
+                'stadium_admin_registration_code': DEV_STADIUM_ADMIN_REGISTRATION_CODE,
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('home'))
+        user = get_user_model().objects.get(phone_number='13200000006')
+        self.assertEqual(user.role, UserRole.STADIUM_ADMIN)
+
+    def test_register_rejects_stadium_admin_without_registration_code(self):
+        response = self.client.post(
+            reverse('accounts:register'),
+            {
+                'role': UserRole.STADIUM_ADMIN,
+                'phone_number': '13200000007',
+                'nickname': 'No Code Admin',
+                'password1': 'StrongPass123',
+                'password2': 'StrongPass123',
+                'verification_code': DEV_VERIFICATION_CODE,
+                'stadium_admin_registration_code': '',
+            },
+        )
+
+        self.assertContains(response, '场馆管理员注册码不正确')
+        self.assertFalse(get_user_model().objects.filter(phone_number='13200000007').exists())
 
     def test_register_rejects_duplicate_phone_number(self):
         get_user_model().objects.create_user(phone_number='13200000001', password='pass')

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}场地管理 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>{{ stadium.name }} 场地管理</h1>
+
+  <div class="actions">
+    <a class="button" href="{% url 'stadiums:field_create' stadium.pk %}">新增场地</a>
+    <a href="{% url 'stadiums:my_stadiums' %}">返回我的场馆</a>
+  </div>
+
+  {% if fields %}
+    <section class="grid" aria-label="场地列表">
+      {% for field in fields %}
+        <article class="item">
+          <strong>{{ field.number }}</strong>
+          <span>类型：{{ field.field_type }}</span><br>
+          <span>价格：{{ field.price_per_hour }} 元/小时</span><br>
+          <span>状态：{% if field.is_active %}启用{% else %}停用{% endif %}</span>
+          <div class="actions">
+            <a href="{% url 'stadiums:time_slot_list' field.pk %}">管理时段</a>
+            <a href="{% url 'stadiums:field_edit' field.pk %}">编辑</a>
+            {% if field.is_active %}
+              <form method="post" action="{% url 'stadiums:field_disable' field.pk %}">
+                {% csrf_token %}
+                <button class="button" type="submit">停用</button>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url 'stadiums:field_delete' field.pk %}">
+              {% csrf_token %}
+              <button class="button" type="submit">删除</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <p>当前还没有场地。</p>
+  {% endif %}
+{% endblock %}

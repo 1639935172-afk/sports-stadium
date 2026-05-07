@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.models import UserRole
 from accounts.permissions import role_required
 
-from .forms import StadiumForm
-from .models import Stadium, StadiumAuditStatus
+from .forms import FieldForm, StadiumForm, TimeSlotForm
+from .models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
 
 def _public_stadiums():
@@ -36,7 +37,19 @@ def stadium_list_view(request):
 
 def stadium_detail_view(request, pk):
     stadium = get_object_or_404(_public_stadiums(), pk=pk)
-    return render(request, 'stadiums/stadium_detail.html', {'stadium': stadium})
+    fields = stadium.fields.filter(is_active=True).prefetch_related(
+        Prefetch('time_slots', queryset=TimeSlot.objects.filter(is_available=True), to_attr='available_time_slots')
+    )
+    return render(request, 'stadiums/stadium_detail.html', {'stadium': stadium, 'fields': fields})
+
+
+def _owned_approved_stadiums(user):
+    return Stadium.objects.filter(
+        owner=user,
+        audit_status=StadiumAuditStatus.APPROVED,
+        is_open=True,
+        deletion_requested=False,
+    )
 
 
 @login_required
@@ -87,6 +100,111 @@ def stadium_delete_request_view(request, pk):
     stadium.request_deletion()
     messages.success(request, '删除申请已提交审核')
     return redirect('stadiums:my_stadiums')
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def field_list_view(request, stadium_pk):
+    stadium = get_object_or_404(_owned_approved_stadiums(request.user), pk=stadium_pk)
+    fields = stadium.fields.all()
+    return render(request, 'stadiums/field_list.html', {'stadium': stadium, 'fields': fields})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def field_create_view(request, stadium_pk):
+    stadium = get_object_or_404(_owned_approved_stadiums(request.user), pk=stadium_pk)
+    form = FieldForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        field = form.save(commit=False)
+        field.stadium = stadium
+        field.save()
+        messages.success(request, '场地已创建')
+        return redirect('stadiums:field_list', stadium_pk=stadium.pk)
+
+    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': stadium, 'title': '新增场地'})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def field_edit_view(request, pk):
+    field = get_object_or_404(Field, pk=pk, stadium__owner=request.user)
+    form = FieldForm(request.POST or None, instance=field)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, '场地信息已更新')
+        return redirect('stadiums:field_list', stadium_pk=field.stadium_id)
+
+    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': field.stadium, 'title': '编辑场地'})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+@require_POST
+def field_disable_view(request, pk):
+    field = get_object_or_404(Field, pk=pk, stadium__owner=request.user)
+    field.is_active = False
+    field.save(update_fields=['is_active', 'updated_at'])
+    messages.success(request, '场地已停用')
+    return redirect('stadiums:field_list', stadium_pk=field.stadium_id)
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+@require_POST
+def field_delete_view(request, pk):
+    field = get_object_or_404(Field, pk=pk, stadium__owner=request.user)
+    stadium_pk = field.stadium_id
+    field.delete()
+    messages.success(request, '场地已删除')
+    return redirect('stadiums:field_list', stadium_pk=stadium_pk)
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def time_slot_list_view(request, field_pk):
+    field = get_object_or_404(Field, pk=field_pk, stadium__owner=request.user)
+    time_slots = field.time_slots.all()
+    return render(request, 'stadiums/time_slot_list.html', {'field': field, 'time_slots': time_slots})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def time_slot_create_view(request, field_pk):
+    field = get_object_or_404(Field, pk=field_pk, stadium__owner=request.user, is_active=True)
+    form = TimeSlotForm(request.POST or None, field=field)
+    if request.method == 'POST' and form.is_valid():
+        time_slot = form.save(commit=False)
+        time_slot.field = field
+        time_slot.save()
+        messages.success(request, '时段已创建')
+        return redirect('stadiums:time_slot_list', field_pk=field.pk)
+
+    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': field, 'title': '新增时段'})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+def time_slot_edit_view(request, pk):
+    time_slot = get_object_or_404(TimeSlot, pk=pk, field__stadium__owner=request.user)
+    form = TimeSlotForm(request.POST or None, instance=time_slot)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, '时段已更新')
+        return redirect('stadiums:time_slot_list', field_pk=time_slot.field_id)
+
+    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': time_slot.field, 'title': '编辑时段'})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+@require_POST
+def time_slot_delete_view(request, pk):
+    time_slot = get_object_or_404(TimeSlot, pk=pk, field__stadium__owner=request.user)
+    field_pk = time_slot.field_id
+    time_slot.delete()
+    messages.success(request, '时段已删除')
+    return redirect('stadiums:time_slot_list', field_pk=field_pk)
 
 
 @login_required

@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from .forms import (
+    DEV_STADIUM_ADMIN_REGISTRATION_CODE,
     DEV_VERIFICATION_CODE,
     AccountCancellationForm,
     LoginForm,
@@ -28,7 +29,11 @@ def register_view(request):
     return render(
         request,
         'accounts/register.html',
-        {'form': form, 'dev_verification_code': DEV_VERIFICATION_CODE},
+        {
+            'form': form,
+            'dev_verification_code': DEV_VERIFICATION_CODE,
+            'dev_stadium_admin_registration_code': DEV_STADIUM_ADMIN_REGISTRATION_CODE,
+        },
     )
 
 

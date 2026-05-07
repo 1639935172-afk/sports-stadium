@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}时段管理 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>{{ field.number }} 时段管理</h1>
+  <p>{{ field.stadium.name }} / {{ field.field_type }}</p>
+
+  <div class="actions">
+    {% if field.is_active %}
+      <a class="button" href="{% url 'stadiums:time_slot_create' field.pk %}">新增时段</a>
+    {% endif %}
+    <a href="{% url 'stadiums:field_list' field.stadium.pk %}">返回场地管理</a>
+  </div>
+
+  {% if time_slots %}
+    <section class="grid" aria-label="开放时段列表">
+      {% for slot in time_slots %}
+        <article class="item">
+          <strong>{{ slot.date }}</strong>
+          <span>{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</span><br>
+          <span>状态：{% if slot.is_available %}可约{% else %}不可约{% endif %}</span>
+          <div class="actions">
+            <a href="{% url 'stadiums:time_slot_edit' slot.pk %}">编辑</a>
+            <form method="post" action="{% url 'stadiums:time_slot_delete' slot.pk %}">
+              {% csrf_token %}
+              <button class="button" type="submit">删除</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <p>当前还没有开放时段。</p>
+  {% endif %}
+{% endblock %}

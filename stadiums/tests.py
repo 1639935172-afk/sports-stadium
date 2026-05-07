@@ -1,10 +1,13 @@
+from datetime import date, time
+
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import UserRole
 
-from .models import Stadium, StadiumAuditStatus
+from .models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
 
 class StadiumWorkflowTests(TestCase):
@@ -242,9 +245,347 @@ class PublicStadiumTests(TestCase):
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(detail_response.status_code, 200)
 
-        self.client.force_login(self.ordinary_user)
-        list_response = self.client.get(reverse('stadiums:list'))
-        detail_response = self.client.get(reverse('stadiums:detail', args=[stadium.pk]))
 
-        self.assertEqual(list_response.status_code, 200)
-        self.assertEqual(detail_response.status_code, 200)
+class FieldManagementTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.stadium_admin = User.objects.create_user(
+            phone_number='13200000001',
+            password='pass',
+            role=UserRole.STADIUM_ADMIN,
+        )
+        self.other_stadium_admin = User.objects.create_user(
+            phone_number='13200000002',
+            password='pass',
+            role=UserRole.STADIUM_ADMIN,
+        )
+        self.ordinary_user = User.objects.create_user(
+            phone_number='13200000003',
+            password='pass',
+            role=UserRole.ORDINARY,
+        )
+        self.approved_stadium = Stadium.objects.create(
+            owner=self.stadium_admin,
+            name='Approved Stadium',
+            address='Address',
+            phone_number='02512345678',
+            information='Info',
+            audit_status=StadiumAuditStatus.APPROVED,
+            is_open=True,
+        )
+        self.pending_stadium = Stadium.objects.create(
+            owner=self.stadium_admin,
+            name='Pending Stadium',
+            address='Address',
+            phone_number='02512345678',
+            information='Info',
+        )
+        self.other_stadium = Stadium.objects.create(
+            owner=self.other_stadium_admin,
+            name='Other Stadium',
+            address='Address',
+            phone_number='02512345678',
+            information='Info',
+            audit_status=StadiumAuditStatus.APPROVED,
+            is_open=True,
+        )
+
+    def field_payload(self, **overrides):
+        payload = {
+            'field_type': 'Basketball',
+            'number': 'A1',
+            'is_active': 'on',
+            'price_per_hour': '80.00',
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_stadium_admin_can_create_field_under_own_approved_stadium(self):
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:field_create', args=[self.approved_stadium.pk]),
+            self.field_payload(),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:field_list', args=[self.approved_stadium.pk]))
+        field = Field.objects.get(stadium=self.approved_stadium)
+        self.assertEqual(field.number, 'A1')
+        self.assertEqual(field.field_type, 'Basketball')
+        self.assertTrue(field.is_active)
+
+    def test_cannot_create_field_under_unapproved_or_other_stadium(self):
+        self.client.force_login(self.stadium_admin)
+
+        pending_response = self.client.post(
+            reverse('stadiums:field_create', args=[self.pending_stadium.pk]),
+            self.field_payload(number='P1'),
+        )
+        other_response = self.client.post(
+            reverse('stadiums:field_create', args=[self.other_stadium.pk]),
+            self.field_payload(number='O1'),
+        )
+
+        self.assertEqual(pending_response.status_code, 404)
+        self.assertEqual(other_response.status_code, 404)
+        self.assertFalse(Field.objects.exists())
+
+    def test_ordinary_user_cannot_manage_fields(self):
+        self.client.force_login(self.ordinary_user)
+
+        response = self.client.post(
+            reverse('stadiums:field_create', args=[self.approved_stadium.pk]),
+            self.field_payload(),
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Field.objects.exists())
+
+    def test_stadium_admin_can_edit_disable_and_delete_own_field(self):
+        field = Field.objects.create(
+            stadium=self.approved_stadium,
+            field_type='Basketball',
+            number='A1',
+            price_per_hour='80.00',
+        )
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:field_edit', args=[field.pk]),
+            self.field_payload(field_type='Tennis', number='T1', price_per_hour='120.00'),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:field_list', args=[self.approved_stadium.pk]))
+        field.refresh_from_db()
+        self.assertEqual(field.field_type, 'Tennis')
+        self.assertEqual(field.number, 'T1')
+
+        response = self.client.post(reverse('stadiums:field_disable', args=[field.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('stadiums:field_list', args=[self.approved_stadium.pk]))
+        field.refresh_from_db()
+        self.assertFalse(field.is_active)
+
+        response = self.client.post(reverse('stadiums:field_delete', args=[field.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('stadiums:field_list', args=[self.approved_stadium.pk]))
+        self.assertFalse(Field.objects.filter(pk=field.pk).exists())
+
+    def test_public_detail_shows_only_active_fields(self):
+        active = Field.objects.create(
+            stadium=self.approved_stadium,
+            field_type='Basketball',
+            number='A1',
+            price_per_hour='80.00',
+        )
+        inactive = Field.objects.create(
+            stadium=self.approved_stadium,
+            field_type='Tennis',
+            number='T1',
+            price_per_hour='120.00',
+            is_active=False,
+        )
+
+        response = self.client.get(reverse('stadiums:detail', args=[self.approved_stadium.pk]))
+
+        self.assertContains(response, active.number)
+        self.assertContains(response, '80.00')
+        self.assertNotContains(response, inactive.number)
+        self.assertNotContains(response, '120.00')
+
+
+class TimeSlotManagementTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.stadium_admin = User.objects.create_user(
+            phone_number='13300000001',
+            password='pass',
+            role=UserRole.STADIUM_ADMIN,
+        )
+        self.other_stadium_admin = User.objects.create_user(
+            phone_number='13300000002',
+            password='pass',
+            role=UserRole.STADIUM_ADMIN,
+        )
+        self.ordinary_user = User.objects.create_user(
+            phone_number='13300000003',
+            password='pass',
+            role=UserRole.ORDINARY,
+        )
+        self.stadium = Stadium.objects.create(
+            owner=self.stadium_admin,
+            name='Slot Stadium',
+            address='Address',
+            phone_number='02512345678',
+            information='Info',
+            audit_status=StadiumAuditStatus.APPROVED,
+            is_open=True,
+        )
+        self.other_stadium = Stadium.objects.create(
+            owner=self.other_stadium_admin,
+            name='Other Slot Stadium',
+            address='Address',
+            phone_number='02512345678',
+            information='Info',
+            audit_status=StadiumAuditStatus.APPROVED,
+            is_open=True,
+        )
+        self.field = Field.objects.create(
+            stadium=self.stadium,
+            field_type='Basketball',
+            number='A1',
+            price_per_hour='80.00',
+        )
+        self.other_field = Field.objects.create(
+            stadium=self.other_stadium,
+            field_type='Tennis',
+            number='T1',
+            price_per_hour='120.00',
+        )
+
+    def slot_payload(self, **overrides):
+        payload = {
+            'date': '2026-05-08',
+            'start_time': '09:00',
+            'end_time': '10:00',
+            'is_available': 'on',
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_stadium_admin_can_create_edit_and_delete_own_time_slot(self):
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:time_slot_create', args=[self.field.pk]),
+            self.slot_payload(),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:time_slot_list', args=[self.field.pk]))
+        slot = TimeSlot.objects.get(field=self.field)
+        self.assertEqual(slot.start_time, time(9, 0))
+        self.assertTrue(slot.is_available)
+
+        response = self.client.post(
+            reverse('stadiums:time_slot_edit', args=[slot.pk]),
+            self.slot_payload(start_time='10:00', end_time='11:00', is_available=''),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:time_slot_list', args=[self.field.pk]))
+        slot.refresh_from_db()
+        self.assertEqual(slot.start_time, time(10, 0))
+        self.assertFalse(slot.is_available)
+
+        response = self.client.post(reverse('stadiums:time_slot_delete', args=[slot.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('stadiums:time_slot_list', args=[self.field.pk]))
+        self.assertFalse(TimeSlot.objects.filter(pk=slot.pk).exists())
+
+    def test_overlapping_time_slots_are_rejected_but_adjacent_slots_are_allowed(self):
+        TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 5, 8),
+            start_time=time(9, 0),
+            end_time=time(11, 0),
+        )
+
+        with self.assertRaises(ValidationError):
+            TimeSlot.objects.create(
+                field=self.field,
+                date=date(2026, 5, 8),
+                start_time=time(10, 0),
+                end_time=time(12, 0),
+            )
+
+        adjacent = TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 5, 8),
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+        )
+
+        self.assertEqual(adjacent.start_time, time(11, 0))
+
+    def test_overlapping_time_slot_form_returns_error(self):
+        TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 5, 8),
+            start_time=time(9, 0),
+            end_time=time(11, 0),
+        )
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:time_slot_create', args=[self.field.pk]),
+            self.slot_payload(start_time='10:00', end_time='12:00'),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '同一场地同一天的开放时段不能重叠')
+        self.assertEqual(TimeSlot.objects.count(), 1)
+
+    def test_start_time_must_be_before_end_time(self):
+        with self.assertRaises(ValidationError):
+            TimeSlot.objects.create(
+                field=self.field,
+                date=date(2026, 5, 8),
+                start_time=time(11, 0),
+                end_time=time(11, 0),
+            )
+
+    def test_cannot_create_available_time_slot_for_inactive_field(self):
+        self.field.is_active = False
+        self.field.save(update_fields=['is_active'])
+
+        with self.assertRaises(ValidationError):
+            TimeSlot.objects.create(
+                field=self.field,
+                date=date(2026, 5, 8),
+                start_time=time(9, 0),
+                end_time=time(10, 0),
+            )
+
+    def test_non_owner_and_ordinary_user_cannot_manage_time_slots(self):
+        self.client.force_login(self.stadium_admin)
+
+        other_response = self.client.post(
+            reverse('stadiums:time_slot_create', args=[self.other_field.pk]),
+            self.slot_payload(),
+        )
+
+        self.assertEqual(other_response.status_code, 404)
+
+        self.client.force_login(self.ordinary_user)
+        ordinary_response = self.client.post(
+            reverse('stadiums:time_slot_create', args=[self.field.pk]),
+            self.slot_payload(),
+        )
+
+        self.assertEqual(ordinary_response.status_code, 403)
+        self.assertFalse(TimeSlot.objects.exists())
+
+    def test_public_detail_shows_only_available_time_slots(self):
+        available = TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 5, 8),
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        unavailable = TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 5, 8),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            is_available=False,
+        )
+
+        response = self.client.get(reverse('stadiums:detail', args=[self.stadium.pk]))
+
+        self.assertContains(response, available.date.isoformat())
+        self.assertContains(response, '09:00-10:00')
+        self.assertNotContains(response, '10:00-11:00')
+        self.assertFalse(unavailable.is_available)

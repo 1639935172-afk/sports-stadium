@@ -21,6 +21,9 @@
             <p class="danger">删除申请审核中</p>
           {% endif %}
           <div class="actions">
+            {% if stadium.audit_status == "approved" and stadium.is_open and not stadium.deletion_requested %}
+              <a href="{% url 'stadiums:field_list' stadium.pk %}">管理场地</a>
+            {% endif %}
             <a href="{% url 'stadiums:edit' stadium.pk %}">修改</a>
             <form method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">
               {% csrf_token %}
