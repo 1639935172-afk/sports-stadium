@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>体育场馆预约系统</h1>
+  <p>项目骨架已就绪。下一步将依次实现账户权限、场馆审核、场地时段、预约审核和评论管理。</p>
+
+  <section class="grid" aria-label="核心模块">
+    <div class="item">
+      <strong>账户与权限</strong>
+      <span>普通用户、场馆管理员、系统管理员三类角色。</span>
+    </div>
+    <div class="item">
+      <strong>场馆与场地</strong>
+      <span>场馆审核、场地维护、时段冲突校验。</span>
+    </div>
+    <div class="item">
+      <strong>预约管理</strong>
+      <span>用户提交预约，场馆管理员审核，系统防止重复占用。</span>
+    </div>
+    <div class="item">
+      <strong>评论审核</strong>
+      <span>用户提交评论，系统管理员审核后公开展示。</span>
+    </div>
+  </section>
+{% endblock %}

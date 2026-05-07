@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ stadium.name }} - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>{{ stadium.name }}</h1>
+
+  <section class="item">
+    <p><strong>地址</strong>{{ stadium.address }}</p>
+    <p><strong>电话</strong>{{ stadium.phone_number }}</p>
+    <p><strong>简介</strong>{{ stadium.information|default:"暂无简介" }}</p>
+  </section>
+
+  <div class="actions">
+    <a href="{% url 'stadiums:list' %}">返回场馆列表</a>
+  </div>
+{% endblock %}

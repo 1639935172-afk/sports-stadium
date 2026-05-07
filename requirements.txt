@@ -1,0 +1,6 @@
+Django
+python-dotenv
+mysqlclient
+django-widget-tweaks
+pytest
+pytest-django

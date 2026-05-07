@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}注销账号 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>注销账号</h1>
+  <div class="panel">
+    <p class="danger">注销后该账号将不能再登录。请确认这是你想要的操作。</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.errors %}
+            <ul class="errors">
+              {% for error in field.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button class="button" type="submit">确认注销</button>
+      <a href="{% url 'accounts:profile' %}">返回个人资料</a>
+    </form>
+  </div>
+{% endblock %}

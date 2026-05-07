@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}个人资料 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>个人资料</h1>
+  <div class="panel">
+    <p><strong>手机号：</strong>{{ request.user.phone_number }}</p>
+    <p><strong>昵称：</strong>{{ request.user.nickname|default:"未设置" }}</p>
+    <p><strong>角色：</strong>{{ request.user.get_role_display }}</p>
+    <p><strong>账号状态：</strong>{% if request.user.can_login %}正常{% else %}不可登录{% endif %}</p>
+    <div class="actions">
+      <a href="{% url 'accounts:profile_edit' %}">修改资料</a>
+      <a href="{% url 'accounts:password_change' %}">修改密码</a>
+      <a class="danger" href="{% url 'accounts:account_cancel' %}">注销账号</a>
+    </div>
+  </div>
+{% endblock %}

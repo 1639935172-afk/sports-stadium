@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}场馆审核 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>场馆审核</h1>
+  {% if stadiums %}
+    <section class="grid" aria-label="待审核场馆列表">
+      {% for stadium in stadiums %}
+        <article class="item">
+          <strong>{{ stadium.name }}</strong>
+          <span>负责人：{{ stadium.owner.nickname|default:stadium.owner.phone_number }}</span><br>
+          <span>地址：{{ stadium.address }}</span><br>
+          <span>电话：{{ stadium.phone_number }}</span><br>
+          {% if stadium.deletion_requested %}
+            <p class="danger">该申请为删除场馆</p>
+          {% endif %}
+          <p>{{ stadium.information|default:"暂无简介" }}</p>
+          <div class="actions">
+            <form method="post" action="{% url 'stadiums:audit_approve' stadium.pk %}">
+              {% csrf_token %}
+              <button class="button" type="submit">通过</button>
+            </form>
+            <form method="post" action="{% url 'stadiums:audit_reject' stadium.pk %}">
+              {% csrf_token %}
+              <button class="button" type="submit">退回</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <p>当前没有待审核场馆。</p>
+  {% endif %}
+{% endblock %}

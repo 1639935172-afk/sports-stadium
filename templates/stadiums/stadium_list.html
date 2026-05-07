@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}场馆列表 - 体育场馆预约系统{% endblock %}
+
+{% block content %}
+  <h1>场馆列表</h1>
+
+  <form method="get" class="panel" action="{% url 'stadiums:list' %}">
+    <div class="field">
+      <label for="q">搜索场馆名称</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="输入场馆名称">
+    </div>
+    <button class="button" type="submit">搜索</button>
+    {% if query %}
+      <a href="{% url 'stadiums:list' %}">清空搜索</a>
+    {% endif %}
+  </form>
+
+  {% if stadiums %}
+    <section class="grid" aria-label="公开场馆列表">
+      {% for stadium in stadiums %}
+        <article class="item">
+          <strong><a href="{% url 'stadiums:detail' stadium.pk %}">{{ stadium.name }}</a></strong>
+          <span>地址：{{ stadium.address }}</span><br>
+          <span>电话：{{ stadium.phone_number }}</span>
+          <p>{{ stadium.information|default:"暂无简介"|truncatechars:80 }}</p>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <p>当前没有符合条件的场馆。</p>
+  {% endif %}
+{% endblock %}
