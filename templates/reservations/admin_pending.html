@@ -1,0 +1,12 @@
+﻿{% extends "base.html" %}
+{% block title %}预约审核 - 体育场馆预约系统{% endblock %}
+{% block content %}
+  <h1>预约审核</h1>
+  {% if reservations %}
+    <section class="grid" aria-label="待审核预约列表">
+      {% for reservation in reservations %}
+        <article class="item"><strong>{{ reservation.time_slot.field.stadium.name }}</strong><span>用户：{{ reservation.user.nickname|default:reservation.user.phone_number }}</span><br><span>场地：{{ reservation.time_slot.field.number }} / {{ reservation.time_slot.field.field_type }}</span><br><span>日期：{{ reservation.time_slot.date|date:"Y-m-d" }}</span><br><span>时间：{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</span><div class="actions"><form method="post" action="{% url 'reservations:approve' reservation.pk %}">{% csrf_token %}<button class="button" type="submit">通过</button></form><form method="post" action="{% url 'reservations:reject' reservation.pk %}">{% csrf_token %}<button class="button button-secondary" type="submit">拒绝</button></form></div></article>
+      {% endfor %}
+    </section>
+  {% else %}<p class="empty">暂无待审核预约。</p>{% endif %}
+{% endblock %}

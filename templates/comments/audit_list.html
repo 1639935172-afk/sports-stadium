@@ -1,0 +1,12 @@
+﻿{% extends "base.html" %}
+{% block title %}评论审核 - 体育场馆预约系统{% endblock %}
+{% block content %}
+  <h1>评论审核</h1>
+  {% if comments %}
+    <section class="grid" aria-label="待审核评论列表">
+      {% for comment in comments %}
+        <article class="item"><strong>{{ comment.stadium.name }}</strong><span>用户：{{ comment.user.nickname|default:comment.user.phone_number }}</span><br><span>时间：{{ comment.created_at|date:"Y-m-d H:i" }}</span><p>{{ comment.content }}</p><div class="actions"><form method="post" action="{% url 'comments:approve' comment.pk %}">{% csrf_token %}<button class="button" type="submit">通过</button></form><form method="post" action="{% url 'comments:reject' comment.pk %}">{% csrf_token %}<button class="button button-secondary" type="submit">拒绝</button></form><form method="post" action="{% url 'comments:delete' comment.pk %}">{% csrf_token %}<button class="button button-danger" type="submit">删除</button></form></div></article>
+      {% endfor %}
+    </section>
+  {% else %}<p class="empty">暂无待审核评论。</p>{% endif %}
+{% endblock %}

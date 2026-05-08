@@ -1,4 +1,4 @@
-from django.contrib import messages
+﻿from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
@@ -8,6 +8,10 @@ from accounts.models import UserRole
 from accounts.permissions import role_required
 
 from .forms import FieldForm, StadiumForm, TimeSlotForm
+from comments.forms import CommentForm
+from comments.models import CommentAuditStatus
+from reservations.models import Reservation
+
 from .models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
 
@@ -37,10 +41,20 @@ def stadium_list_view(request):
 
 def stadium_detail_view(request, pk):
     stadium = get_object_or_404(_public_stadiums(), pk=pk)
+    occupied_slot_ids = Reservation.objects.filter(
+        status__in=Reservation.occupying_statuses(),
+    ).values('time_slot_id')
+    available_slots = TimeSlot.objects.filter(is_available=True).exclude(pk__in=occupied_slot_ids)
     fields = stadium.fields.filter(is_active=True).prefetch_related(
-        Prefetch('time_slots', queryset=TimeSlot.objects.filter(is_available=True), to_attr='available_time_slots')
+        Prefetch('time_slots', queryset=available_slots, to_attr='available_time_slots')
     )
-    return render(request, 'stadiums/stadium_detail.html', {'stadium': stadium, 'fields': fields})
+    comments = stadium.comments.filter(audit_status=CommentAuditStatus.APPROVED).select_related('user')
+    comment_form = CommentForm() if request.user.is_authenticated and request.user.is_ordinary_user else None
+    return render(
+        request,
+        'stadiums/stadium_detail.html',
+        {'stadium': stadium, 'fields': fields, 'comments': comments, 'comment_form': comment_form},
+    )
 
 
 def _owned_approved_stadiums(user):
@@ -72,7 +86,7 @@ def stadium_create_view(request):
         messages.success(request, '场馆已提交审核')
         return redirect('stadiums:my_stadiums')
 
-    return render(request, 'stadiums/stadium_form.html', {'form': form, 'title': '提交场馆'})
+    return render(request, 'stadiums/stadium_form.html', {'form': form, 'title': '鎻愪氦鍦洪'})
 
 
 @login_required
@@ -86,10 +100,10 @@ def stadium_edit_view(request, pk):
         stadium.is_open = False
         stadium.deletion_requested = False
         stadium.save()
-        messages.success(request, '场馆修改已重新提交审核')
+        messages.success(request, '场馆修改已提交审核')
         return redirect('stadiums:my_stadiums')
 
-    return render(request, 'stadiums/stadium_form.html', {'form': form, 'title': '修改场馆'})
+    return render(request, 'stadiums/stadium_form.html', {'form': form, 'title': '淇敼鍦洪'})
 
 
 @login_required
@@ -122,7 +136,7 @@ def field_create_view(request, stadium_pk):
         messages.success(request, '场地已创建')
         return redirect('stadiums:field_list', stadium_pk=stadium.pk)
 
-    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': stadium, 'title': '新增场地'})
+    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': stadium, 'title': '鏂板鍦哄湴'})
 
 
 @login_required
@@ -132,10 +146,10 @@ def field_edit_view(request, pk):
     form = FieldForm(request.POST or None, instance=field)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, '场地信息已更新')
+        messages.success(request, '场地已更新')
         return redirect('stadiums:field_list', stadium_pk=field.stadium_id)
 
-    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': field.stadium, 'title': '编辑场地'})
+    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': field.stadium, 'title': '缂栬緫鍦哄湴'})
 
 
 @login_required
@@ -180,7 +194,7 @@ def time_slot_create_view(request, field_pk):
         messages.success(request, '时段已创建')
         return redirect('stadiums:time_slot_list', field_pk=field.pk)
 
-    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': field, 'title': '新增时段'})
+    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': field, 'title': '鏂板鏃舵'})
 
 
 @login_required
@@ -193,7 +207,7 @@ def time_slot_edit_view(request, pk):
         messages.success(request, '时段已更新')
         return redirect('stadiums:time_slot_list', field_pk=time_slot.field_id)
 
-    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': time_slot.field, 'title': '编辑时段'})
+    return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': time_slot.field, 'title': '缂栬緫鏃舵'})
 
 
 @login_required
@@ -221,9 +235,9 @@ def audit_approve_view(request, pk):
     stadium = get_object_or_404(Stadium, pk=pk, audit_status=StadiumAuditStatus.PENDING)
     result = stadium.approve()
     if result == 'deleted':
-        messages.success(request, '场馆删除申请已通过，场馆已删除')
+        messages.success(request, '鍦洪鍒犻櫎鐢宠宸查€氳繃锛屽満棣嗗凡鍒犻櫎')
     else:
-        messages.success(request, '场馆审核已通过')
+        messages.success(request, '鍦洪瀹℃牳宸查€氳繃')
     return redirect('stadiums:audit_list')
 
 
@@ -233,5 +247,7 @@ def audit_approve_view(request, pk):
 def audit_reject_view(request, pk):
     stadium = get_object_or_404(Stadium, pk=pk, audit_status=StadiumAuditStatus.PENDING)
     stadium.reject()
-    messages.success(request, '场馆申请已退回')
+    messages.success(request, '场馆审核已拒绝')
     return redirect('stadiums:audit_list')
+
+

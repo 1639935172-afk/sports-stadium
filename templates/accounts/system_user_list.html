@@ -1,0 +1,24 @@
+﻿{% extends "base.html" %}
+{% block title %}用户管理 - 体育场馆预约系统{% endblock %}
+{% block content %}
+  <h1>用户管理</h1>
+  <form method="get" class="panel">
+    <div class="field"><label for="q">搜索用户</label><input id="q" name="q" value="{{ query }}" placeholder="手机号或昵称"></div>
+    <button class="button" type="submit">搜索</button>
+    {% if query %}<a href="{% url 'accounts:system_user_list' %}">清空搜索</a>{% endif %}
+  </form>
+  {% if users %}
+    <section class="grid" aria-label="用户列表">
+      {% for user in users %}
+        <article class="item">
+          <strong>{{ user.nickname|default:user.phone_number }}</strong>
+          <span>手机号：{{ user.phone_number }}</span><br>
+          <span>角色：{{ user.get_role_display }}</span><br>
+          <span>登录状态：{% if user.can_login %}可登录{% else %}不可登录{% endif %}</span><br>
+          <span>注销状态：{% if user.is_cancelled %}已注销{% else %}正常{% endif %}</span>
+          {% if user != request.user %}<div class="actions"><a class="button" href="{% url 'accounts:system_user_edit' user.pk %}">管理</a></div>{% endif %}
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}<p class="empty">没有找到用户。</p>{% endif %}
+{% endblock %}

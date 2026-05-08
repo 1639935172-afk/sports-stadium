@@ -1,4 +1,4 @@
-from django import forms
+﻿from django import forms
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 
@@ -23,7 +23,6 @@ class RegistrationForm(forms.Form):
     password1 = forms.CharField(label='密码', widget=forms.PasswordInput)
     password2 = forms.CharField(label='确认密码', widget=forms.PasswordInput)
     verification_code = forms.CharField(label='验证码', max_length=6)
-
     stadium_admin_registration_code = forms.CharField(
         label='场馆管理员注册码',
         max_length=20,
@@ -40,10 +39,15 @@ class RegistrationForm(forms.Form):
             raise forms.ValidationError('手机号必须是11位数字')
         return phone_number
 
+    def clean_password1(self):
+        password = self.cleaned_data['password1']
+        validate_password(password)
+        return password
+
     def clean_verification_code(self):
         code = self.cleaned_data['verification_code'].strip()
         if code != DEV_VERIFICATION_CODE:
-            raise forms.ValidationError('验证码不正确')
+            raise forms.ValidationError('验证码错误')
         return code
 
     def clean(self):
@@ -80,16 +84,10 @@ class LoginForm(forms.Form):
         cleaned_data = super().clean()
         phone_number = cleaned_data.get('phone_number')
         password = cleaned_data.get('password')
-
         if phone_number and password:
-            self.user = authenticate(
-                self.request,
-                username=phone_number,
-                password=password,
-            )
+            self.user = authenticate(self.request, username=phone_number, password=password)
             if self.user is None or not self.user.can_login:
                 raise forms.ValidationError('手机号或密码错误')
-
         return cleaned_data
 
 
@@ -101,7 +99,7 @@ class ProfileForm(forms.ModelForm):
 
 
 class PasswordChangeForm(forms.Form):
-    old_password = forms.CharField(label='原密码', widget=forms.PasswordInput)
+    old_password = forms.CharField(label='当前密码', widget=forms.PasswordInput)
     new_password1 = forms.CharField(label='新密码', widget=forms.PasswordInput)
     new_password2 = forms.CharField(label='确认新密码', widget=forms.PasswordInput)
 
@@ -112,7 +110,7 @@ class PasswordChangeForm(forms.Form):
     def clean_old_password(self):
         old_password = self.cleaned_data['old_password']
         if not self.user.check_password(old_password):
-            raise forms.ValidationError('原密码不正确')
+            raise forms.ValidationError('当前密码错误')
         return old_password
 
     def clean_new_password1(self):
@@ -155,7 +153,7 @@ class PasswordResetForm(forms.Form):
     def clean_verification_code(self):
         code = self.cleaned_data['verification_code'].strip()
         if code != DEV_VERIFICATION_CODE:
-            raise forms.ValidationError('验证码不正确')
+            raise forms.ValidationError('验证码错误')
         return code
 
     def clean_new_password1(self):
@@ -190,3 +188,29 @@ class AccountCancellationForm(forms.Form):
         if not self.user.check_password(password):
             raise forms.ValidationError('密码不正确')
         return password
+
+
+class SystemUserManagementForm(forms.ModelForm):
+    class Meta:
+        model = get_user_model()
+        fields = ['nickname', 'role', 'is_active', 'is_cancelled']
+        labels = {
+            'nickname': '昵称',
+            'role': '角色',
+            'is_active': '允许登录',
+            'is_cancelled': '已注销',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('is_cancelled'):
+            cleaned_data['is_active'] = False
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if user.is_cancelled:
+            user.is_active = False
+        if commit:
+            user.save()
+        return user

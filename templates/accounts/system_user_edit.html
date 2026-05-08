@@ -1,12 +1,13 @@
 ﻿{% extends "base.html" %}
-{% block title %}{{ title }} - 体育场馆预约系统{% endblock %}
+{% block title %}管理用户 - 体育场馆预约系统{% endblock %}
 {% block content %}
-  <h1>{{ title }}</h1>
-  <p>{{ field.stadium.name }} / {{ field.number }}</p>
+  <h1>管理用户</h1>
+  <section class="item"><p><strong>手机号：</strong>{{ managed_user.phone_number }}</p><p><strong>当前角色：</strong>{{ managed_user.get_role_display }}</p></section>
   <form method="post" class="panel" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}<ul class="errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
     {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{% if field.errors %}<ul class="errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>{% endfor %}
-    <div class="actions"><button class="button" type="submit">保存</button><a href="{% url 'stadiums:time_slot_list' field.pk %}">取消</a></div>
+    <button class="button" type="submit">保存</button>
   </form>
+  <div class="actions"><a href="{% url 'accounts:system_user_list' %}">返回用户管理</a></div>
 {% endblock %}

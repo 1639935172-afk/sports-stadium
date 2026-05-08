@@ -1,23 +1,12 @@
-{% extends "base.html" %}
-
+﻿{% extends "base.html" %}
 {% block title %}我的预约 - 体育场馆预约系统{% endblock %}
-
 {% block content %}
   <h1>我的预约</h1>
-
   {% if reservations %}
     <section class="grid" aria-label="我的预约列表">
       {% for reservation in reservations %}
-        <article class="item">
-          <strong>{{ reservation.time_slot.field.stadium.name }}</strong>
-          <span>场地：{{ reservation.time_slot.field.number }} / {{ reservation.time_slot.field.field_type }}</span><br>
-          <span>日期：{{ reservation.time_slot.date|date:"Y-m-d" }}</span><br>
-          <span>时间：{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</span><br>
-          <span>状态：{{ reservation.get_status_display }}</span>
-        </article>
+        <article class="item"><strong>{{ reservation.time_slot.field.stadium.name }}</strong><span>场地：{{ reservation.time_slot.field.number }} / {{ reservation.time_slot.field.field_type }}</span><br><span>日期：{{ reservation.time_slot.date|date:"Y-m-d" }}</span><br><span>时间：{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</span><br><span>状态：{{ reservation.get_status_display }}</span>{% if reservation.status == "pending" or reservation.status == "approved" %}<form method="post" action="{% url 'reservations:cancel' reservation.pk %}" class="actions">{% csrf_token %}<button class="button button-danger" type="submit">取消预约</button></form>{% endif %}</article>
       {% endfor %}
     </section>
-  {% else %}
-    <p>你还没有提交预约。</p>
-  {% endif %}
+  {% else %}<p class="empty">你还没有预约。</p>{% endif %}
 {% endblock %}

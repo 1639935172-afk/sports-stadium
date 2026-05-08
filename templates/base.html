@@ -1,173 +1,44 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}体育场馆预约系统{% endblock %}</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, "Microsoft YaHei", sans-serif;
-      background: #f6f7f9;
-      color: #1f2937;
-    }
-
-    header {
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    nav, main {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    nav {
-      min-height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    a {
-      color: #1d4ed8;
-      text-decoration: none;
-    }
-
-    .brand {
-      color: #111827;
-      font-weight: 700;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    main {
-      padding-top: 48px;
-      padding-bottom: 64px;
-    }
-
-    h1 {
-      margin: 0 0 16px;
-      font-size: 32px;
-      letter-spacing: 0;
-    }
-
-    p {
-      line-height: 1.7;
-      color: #4b5563;
-    }
-
-    .messages {
-      display: grid;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-
-    .message {
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-      background: #eff6ff;
-      padding: 12px 14px;
-      color: #1e3a8a;
-    }
-
-    .panel {
-      max-width: 460px;
-      border: 1px solid #d8dde6;
-      border-radius: 8px;
-      background: #fff;
-      padding: 24px;
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      padding: 10px 12px;
-      font: inherit;
-    }
-
-    .errors {
-      margin: 6px 0 0;
-      padding-left: 18px;
-      color: #b91c1c;
-      line-height: 1.5;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 40px;
-      border: 0;
-      border-radius: 6px;
-      background: #2563eb;
-      color: #fff;
-      padding: 0 16px;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .hint {
-      color: #6b7280;
-      font-size: 14px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-top: 20px;
-    }
-
-    .danger {
-      color: #b91c1c;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    .item {
-      border: 1px solid #d8dde6;
-      border-radius: 8px;
-      background: #fff;
-      padding: 18px;
-    }
-
-    .item strong {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 16px;
-    }
-
-    .item span {
-      color: #6b7280;
-      line-height: 1.6;
-    }
+    body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; background: #f6f7f9; color: #1f2937; }
+    header { background: #fff; border-bottom: 1px solid #e5e7eb; }
+    nav, main { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+    nav { min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    a { color: #1d4ed8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .brand { color: #111827; font-weight: 700; }
+    .nav-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+    main { padding-top: 40px; padding-bottom: 64px; }
+    h1 { margin: 0 0 16px; font-size: 32px; letter-spacing: 0; }
+    h2 { margin-top: 32px; margin-bottom: 12px; font-size: 22px; letter-spacing: 0; }
+    p { line-height: 1.7; color: #4b5563; }
+    code { background: #eef2f7; border-radius: 4px; padding: 2px 5px; }
+    .messages { display: grid; gap: 8px; margin-bottom: 20px; }
+    .message { border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; padding: 12px 14px; color: #1e3a8a; }
+    .panel { max-width: 520px; border: 1px solid #d8dde6; border-radius: 8px; background: #fff; padding: 24px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; }
+    input, textarea, select { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; font: inherit; background: #fff; }
+    input[type="checkbox"] { width: auto; margin-right: 8px; }
+    .errors { margin: 6px 0 0; padding-left: 18px; color: #b91c1c; line-height: 1.5; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; padding: 0 16px; font: inherit; cursor: pointer; }
+    .button:hover { text-decoration: none; background: #1d4ed8; }
+    .button-secondary { background: #4b5563; }
+    .button-danger { background: #b91c1c; }
+    .hint { color: #6b7280; font-size: 14px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 20px; }
+    .danger { color: #b91c1c; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 24px; }
+    .item { border: 1px solid #d8dde6; border-radius: 8px; background: #fff; padding: 18px; }
+    .item strong { display: block; margin-bottom: 8px; font-size: 16px; }
+    .item span { color: #6b7280; line-height: 1.6; }
+    .empty { border: 1px dashed #cbd5e1; border-radius: 8px; background: #fff; padding: 20px; color: #6b7280; }
+    @media (max-width: 640px) { nav { align-items: flex-start; flex-direction: column; padding-top: 14px; padding-bottom: 14px; } h1 { font-size: 26px; } }
   </style>
 </head>
 <body>
@@ -178,14 +49,15 @@
         <a href="{% url 'stadiums:list' %}">场馆列表</a>
         {% if request.user.is_authenticated %}
           <a href="{% url 'accounts:profile' %}">{{ request.user.nickname|default:request.user.phone_number }}</a>
-          {% if request.user.is_ordinary_user %}
-            <a href="{% url 'reservations:mine' %}">我的预约</a>
-          {% endif %}
+          {% if request.user.is_ordinary_user %}<a href="{% url 'reservations:mine' %}">我的预约</a>{% endif %}
           {% if request.user.is_stadium_admin %}
             <a href="{% url 'stadiums:my_stadiums' %}">我的场馆</a>
+            <a href="{% url 'reservations:admin_pending' %}">预约审核</a>
           {% endif %}
           {% if request.user.is_system_admin %}
+            <a href="{% url 'accounts:system_user_list' %}">用户管理</a>
             <a href="{% url 'stadiums:audit_list' %}">场馆审核</a>
+            <a href="{% url 'comments:audit_list' %}">评论审核</a>
           {% endif %}
           <a href="{% url 'accounts:logout' %}">退出</a>
         {% else %}
@@ -198,9 +70,7 @@
   <main>
     {% if messages %}
       <div class="messages">
-        {% for message in messages %}
-          <div class="message">{{ message }}</div>
-        {% endfor %}
+        {% for message in messages %}<div class="message">{{ message }}</div>{% endfor %}
       </div>
     {% endif %}
     {% block content %}{% endblock %}

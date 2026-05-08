@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+﻿from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -12,7 +12,7 @@ class UserModelTests(TestCase):
         user = get_user_model().objects.create_user(
             phone_number='13800000000',
             password='test-pass',
-            nickname='测试用户',
+            nickname='普通用户',
         )
 
         self.assertEqual(user.role, UserRole.ORDINARY)
@@ -30,10 +30,7 @@ class UserModelTests(TestCase):
         self.assertTrue(user.is_superuser)
 
     def test_cancel_account_disables_login(self):
-        user = get_user_model().objects.create_user(
-            phone_number='13700000000',
-            password='test-pass',
-        )
+        user = get_user_model().objects.create_user(phone_number='13700000000', password='test-pass')
 
         user.cancel_account()
 
@@ -124,6 +121,21 @@ class AuthFlowTests(TestCase):
         self.assertContains(response, '场馆管理员注册码不正确')
         self.assertFalse(get_user_model().objects.filter(phone_number='13200000007').exists())
 
+    def test_register_rejects_common_password(self):
+        response = self.client.post(
+            reverse('accounts:register'),
+            {
+                'phone_number': '13200000008',
+                'nickname': 'Common Password User',
+                'password1': 'password123',
+                'password2': 'password123',
+                'verification_code': DEV_VERIFICATION_CODE,
+            },
+        )
+
+        self.assertContains(response, '这个密码太常见了')
+        self.assertFalse(get_user_model().objects.filter(phone_number='13200000008').exists())
+
     def test_register_rejects_duplicate_phone_number(self):
         get_user_model().objects.create_user(phone_number='13200000001', password='pass')
 
@@ -152,7 +164,7 @@ class AuthFlowTests(TestCase):
             },
         )
 
-        self.assertContains(response, '验证码不正确')
+        self.assertContains(response, '验证码错误')
         self.assertFalse(get_user_model().objects.filter(phone_number='13200000002').exists())
 
     def test_register_rejects_phone_number_that_is_not_11_digits(self):
@@ -171,10 +183,7 @@ class AuthFlowTests(TestCase):
         self.assertFalse(get_user_model().objects.filter(phone_number='132000').exists())
 
     def test_login_accepts_valid_credentials(self):
-        user = get_user_model().objects.create_user(
-            phone_number='13200000003',
-            password='StrongPass123',
-        )
+        user = get_user_model().objects.create_user(phone_number='13200000003', password='StrongPass123')
 
         response = self.client.post(
             reverse('accounts:login'),
@@ -202,7 +211,7 @@ class AccountManagementFlowTests(TestCase):
         self.user = get_user_model().objects.create_user(
             phone_number='13100000000',
             password='OldPass123',
-            nickname='旧昵称',
+            nickname='原昵称',
         )
 
     def test_profile_requires_login(self):
@@ -217,16 +226,12 @@ class AccountManagementFlowTests(TestCase):
         response = self.client.get(reverse('accounts:profile'))
 
         self.assertContains(response, '13100000000')
-        self.assertContains(response, '旧昵称')
+        self.assertContains(response, '原昵称')
 
     def test_user_can_update_nickname(self):
         self.client.force_login(self.user)
 
-        response = self.client.post(
-            reverse('accounts:profile_edit'),
-            {'nickname': '新昵称'},
-            follow=True,
-        )
+        response = self.client.post(reverse('accounts:profile_edit'), {'nickname': '新昵称'}, follow=True)
 
         self.assertRedirects(response, reverse('accounts:profile'))
         self.user.refresh_from_db()
@@ -262,7 +267,7 @@ class AccountManagementFlowTests(TestCase):
             },
         )
 
-        self.assertContains(response, '原密码不正确')
+        self.assertContains(response, '当前密码错误')
 
     def test_password_reset_updates_password(self):
         response = self.client.post(
@@ -291,16 +296,12 @@ class AccountManagementFlowTests(TestCase):
             },
         )
 
-        self.assertContains(response, '验证码不正确')
+        self.assertContains(response, '验证码错误')
 
     def test_user_can_cancel_account(self):
         self.client.force_login(self.user)
 
-        response = self.client.post(
-            reverse('accounts:account_cancel'),
-            {'password': 'OldPass123'},
-            follow=True,
-        )
+        response = self.client.post(reverse('accounts:account_cancel'), {'password': 'OldPass123'}, follow=True)
 
         self.assertRedirects(response, reverse('home'))
         self.user.refresh_from_db()
@@ -311,23 +312,108 @@ class AccountManagementFlowTests(TestCase):
     def test_cancel_account_rejects_wrong_password(self):
         self.client.force_login(self.user)
 
-        response = self.client.post(
-            reverse('accounts:account_cancel'),
-            {'password': 'WrongPass123'},
-        )
+        response = self.client.post(reverse('accounts:account_cancel'), {'password': 'WrongPass123'})
 
         self.assertContains(response, '密码不正确')
         self.user.refresh_from_db()
         self.assertFalse(self.user.is_cancelled)
 
     def test_logout_clears_session(self):
-        user = get_user_model().objects.create_user(
-            phone_number='13200000005',
-            password='StrongPass123',
-        )
+        user = get_user_model().objects.create_user(phone_number='13200000005', password='StrongPass123')
         self.client.force_login(user)
 
         response = self.client.get(reverse('accounts:logout'), follow=True)
 
         self.assertRedirects(response, reverse('home'))
         self.assertNotIn('_auth_user_id', self.client.session)
+
+
+class SystemUserManagementTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.system_admin = User.objects.create_user(
+            phone_number='13010000001',
+            password='pass',
+            role=UserRole.SYSTEM_ADMIN,
+            nickname='System Admin',
+        )
+        self.ordinary_user = User.objects.create_user(
+            phone_number='13010000002',
+            password='pass',
+            role=UserRole.ORDINARY,
+            nickname='Ordinary User',
+        )
+        self.stadium_admin = User.objects.create_user(
+            phone_number='13010000003',
+            password='pass',
+            role=UserRole.STADIUM_ADMIN,
+            nickname='Stadium Admin',
+        )
+
+    def test_system_admin_can_list_users(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.get(reverse('accounts:system_user_list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.ordinary_user.phone_number)
+        self.assertContains(response, self.stadium_admin.phone_number)
+
+    def test_user_list_can_search_by_phone_or_nickname(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.get(reverse('accounts:system_user_list'), {'q': 'Ordinary'})
+
+        self.assertContains(response, self.ordinary_user.phone_number)
+        self.assertNotContains(response, self.stadium_admin.phone_number)
+
+    def test_non_system_admin_cannot_access_user_management(self):
+        self.client.force_login(self.ordinary_user)
+
+        list_response = self.client.get(reverse('accounts:system_user_list'))
+        edit_response = self.client.get(reverse('accounts:system_user_edit', args=[self.stadium_admin.pk]))
+
+        self.assertEqual(list_response.status_code, 403)
+        self.assertEqual(edit_response.status_code, 403)
+
+    def test_system_admin_can_update_user_role_and_login_status(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.post(
+            reverse('accounts:system_user_edit', args=[self.ordinary_user.pk]),
+            {
+                'nickname': 'Managed User',
+                'role': UserRole.STADIUM_ADMIN,
+                'is_active': '',
+                'is_cancelled': 'on',
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('accounts:system_user_list'))
+        self.ordinary_user.refresh_from_db()
+        self.assertEqual(self.ordinary_user.nickname, 'Managed User')
+        self.assertEqual(self.ordinary_user.role, UserRole.STADIUM_ADMIN)
+        self.assertFalse(self.ordinary_user.is_active)
+        self.assertTrue(self.ordinary_user.is_cancelled)
+        self.assertFalse(self.ordinary_user.can_login)
+
+    def test_system_admin_cannot_manage_self_from_user_management(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.post(
+            reverse('accounts:system_user_edit', args=[self.system_admin.pk]),
+            {
+                'nickname': 'Locked Out',
+                'role': UserRole.ORDINARY,
+                'is_active': '',
+                'is_cancelled': 'on',
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('accounts:system_user_list'))
+        self.system_admin.refresh_from_db()
+        self.assertEqual(self.system_admin.role, UserRole.SYSTEM_ADMIN)
+        self.assertTrue(self.system_admin.is_active)
+        self.assertFalse(self.system_admin.is_cancelled)

@@ -1,7 +1,11 @@
-from django.contrib import messages
-from django.contrib.auth import login, logout, update_session_auth_hash
+﻿from django.contrib import messages
+from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+
+from accounts.models import UserRole
+from accounts.permissions import role_required
 
 from .forms import (
     DEV_STADIUM_ADMIN_REGISTRATION_CODE,
@@ -12,6 +16,7 @@ from .forms import (
     PasswordResetForm,
     ProfileForm,
     RegistrationForm,
+    SystemUserManagementForm,
 )
 
 
@@ -112,3 +117,30 @@ def account_cancel_view(request):
         return redirect('home')
 
     return render(request, 'accounts/account_cancel.html', {'form': form})
+
+
+@login_required
+@role_required(UserRole.SYSTEM_ADMIN)
+def system_user_list_view(request):
+    query = request.GET.get('q', '').strip()
+    users = get_user_model().objects.all().order_by('phone_number')
+    if query:
+        users = users.filter(Q(phone_number__icontains=query) | Q(nickname__icontains=query))
+    return render(request, 'accounts/system_user_list.html', {'users': users, 'query': query})
+
+
+@login_required
+@role_required(UserRole.SYSTEM_ADMIN)
+def system_user_edit_view(request, pk):
+    managed_user = get_object_or_404(get_user_model(), pk=pk)
+    if managed_user.pk == request.user.pk:
+        messages.error(request, '不能在这里管理自己的账号')
+        return redirect('accounts:system_user_list')
+
+    form = SystemUserManagementForm(request.POST or None, instance=managed_user)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, '用户信息已更新')
+        return redirect('accounts:system_user_list')
+
+    return render(request, 'accounts/system_user_edit.html', {'form': form, 'managed_user': managed_user})

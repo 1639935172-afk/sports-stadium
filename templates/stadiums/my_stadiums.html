@@ -1,39 +1,6 @@
-{% extends "base.html" %}
-
+﻿{% extends "base.html" %}
 {% block title %}我的场馆 - 体育场馆预约系统{% endblock %}
-
 {% block content %}
-  <h1>我的场馆</h1>
-  <div class="actions">
-    <a class="button" href="{% url 'stadiums:create' %}">提交场馆</a>
-  </div>
-
-  {% if stadiums %}
-    <section class="grid" aria-label="我的场馆列表">
-      {% for stadium in stadiums %}
-        <article class="item">
-          <strong>{{ stadium.name }}</strong>
-          <span>地址：{{ stadium.address }}</span><br>
-          <span>电话：{{ stadium.phone_number }}</span><br>
-          <span>审核：{{ stadium.get_audit_status_display }}</span><br>
-          <span>状态：{% if stadium.is_open %}开放{% else %}未开放{% endif %}</span>
-          {% if stadium.deletion_requested %}
-            <p class="danger">删除申请审核中</p>
-          {% endif %}
-          <div class="actions">
-            {% if stadium.audit_status == "approved" and stadium.is_open and not stadium.deletion_requested %}
-              <a href="{% url 'stadiums:field_list' stadium.pk %}">管理场地</a>
-            {% endif %}
-            <a href="{% url 'stadiums:edit' stadium.pk %}">修改</a>
-            <form method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">
-              {% csrf_token %}
-              <button class="button" type="submit">申请删除</button>
-            </form>
-          </div>
-        </article>
-      {% endfor %}
-    </section>
-  {% else %}
-    <p>还没有提交场馆。</p>
-  {% endif %}
+  <h1>我的场馆</h1><div class="actions"><a class="button" href="{% url 'stadiums:create' %}">提交场馆</a></div>
+  {% if stadiums %}<section class="grid" aria-label="我的场馆列表">{% for stadium in stadiums %}<article class="item"><strong>{{ stadium.name }}</strong><span>地址：{{ stadium.address }}</span><br><span>电话：{{ stadium.phone_number }}</span><br><span>审核：{{ stadium.get_audit_status_display }}</span><br><span>状态：{% if stadium.is_open %}开放{% else %}未开放{% endif %}</span>{% if stadium.deletion_requested %}<p class="danger">删除申请审核中</p>{% endif %}<div class="actions">{% if stadium.audit_status == "approved" and stadium.is_open and not stadium.deletion_requested %}<a class="button" href="{% url 'stadiums:field_list' stadium.pk %}">管理场地</a>{% endif %}<a href="{% url 'stadiums:edit' stadium.pk %}">修改</a><form method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">{% csrf_token %}<button class="button button-danger" type="submit">申请删除</button></form></div></article>{% endfor %}</section>{% else %}<p class="empty">还没有提交场馆。</p>{% endif %}
 {% endblock %}

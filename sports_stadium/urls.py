@@ -1,4 +1,4 @@
-"""
+﻿"""
 URL configuration for sports_stadium project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -24,5 +24,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('stadiums/', include('stadiums.urls')),
     path('reservations/', include('reservations.urls')),
+    path('comments/', include('comments.urls')),
     path('admin/', admin.site.urls),
 ]
+
