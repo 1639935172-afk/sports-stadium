@@ -9,4 +9,4 @@ htmlcov/
 staticfiles/
 media/
 .vscode/
-.docx
+*.docx

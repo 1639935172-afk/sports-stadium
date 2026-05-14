@@ -1,4 +1,4 @@
-﻿"""
+"""
 URL configuration for sports_stadium project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -22,6 +22,7 @@ from .views import home
 urlpatterns = [
     path('', home, name='home'),
     path('accounts/', include('accounts.urls')),
+    path('api/', include('api.urls')),
     path('stadiums/', include('stadiums.urls')),
     path('reservations/', include('reservations.urls')),
     path('comments/', include('comments.urls')),

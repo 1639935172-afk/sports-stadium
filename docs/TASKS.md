@@ -316,6 +316,257 @@
 - [ ] 预约冲突、时段冲突、审核状态流转通过验证。
 - [ ] README、PRD、任务文档与当前实现保持一致。
 
+## 任务 16：后端 REST API 基础
+
+**Type**: AFK
+
+**Blocked by**: 任务 15
+
+**User stories covered**: 1, 2, 3, 14, 16, 31, 33, 34, 40, 46, 47, 48, 49, 50
+
+### What to build
+
+在现有 Django Web 系统基础上增加面向 Android/Flutter 客户端的 REST API。移动端不直接连接 MySQL，而是通过 HTTP/JSON 调用 Django 后端，由后端继续负责用户认证、权限校验、预约冲突防护、评论审核状态和数据一致性。
+
+建议接口范围：
+
+- `POST /api/auth/register/`
+- `POST /api/auth/login/`
+- `POST /api/auth/logout/`
+- `GET /api/profile/`
+- `GET /api/stadiums/`
+- `GET /api/stadiums/{id}/`
+- `GET /api/stadiums/{id}/comments/`
+- `POST /api/reservations/`
+- `GET /api/reservations/mine/`
+- `POST /api/reservations/{id}/cancel/`
+- `POST /api/comments/`
+
+### Acceptance criteria
+
+- [ ] Django 项目已引入 API 层，接口返回稳定 JSON 数据。
+- [ ] Android 客户端可以完成注册、登录、获取个人信息。
+- [ ] 场馆列表、场馆详情、可预约时段可以通过 API 获取。
+- [ ] 提交预约、查看我的预约、取消预约可以通过 API 完成。
+- [ ] 评论提交和已审核评论展示可以通过 API 完成。
+- [ ] API 复用现有权限与业务校验，不绕过 Web 端已有规则。
+- [ ] 自动化测试覆盖主要 API 成功路径和权限失败路径。
+
+## 任务 17：Flutter Android 项目初始化
+
+**Type**: AFK
+
+**Blocked by**: 任务 16
+
+**User stories covered**: 46, 47, 48
+
+### What to build
+
+在 Android Studio 中配置 Flutter 开发环境，创建 Android 客户端项目。Flutter 项目作为现有 Django 后端的移动端客户端，负责 Android App 界面、路由、状态管理和网络请求调试。
+
+建议目录：
+
+- `mobile_app/`
+
+建议基础能力：
+
+- Flutter SDK 和 Android SDK 配置完成。
+- Android 模拟器或真机调试可运行。
+- 配置网络请求基础地址，支持本地 Django 服务。
+- 建立基础目录结构：页面、模型、API 客户端、状态管理、通用组件。
+
+### Acceptance criteria
+
+- [ ] `mobile_app` 可以在 Android Studio 中打开。
+- [ ] `flutter doctor` 关键项通过。
+- [ ] App 可以在 Android 模拟器或真机运行。
+- [ ] App 能访问本地 Django API 的健康检查或基础接口。
+- [ ] README 或移动端文档记录 Flutter 运行命令和调试说明。
+
+## 任务 18：Flutter 登录注册与用户状态
+
+**Type**: AFK
+
+**Blocked by**: 任务 17
+
+**User stories covered**: 1, 2, 3, 4, 5, 6, 46, 47
+
+### What to build
+
+实现 Android App 的登录、注册、退出登录和用户状态保持。移动端登录后保存认证凭据，后续请求自动携带认证信息。
+
+### Acceptance criteria
+
+- [ ] 普通用户可以在 App 中注册账号。
+- [ ] 用户可以使用手机号和密码登录。
+- [ ] 登录失败时显示清晰错误反馈。
+- [ ] 登录成功后进入 App 主界面。
+- [ ] App 重启后可以恢复登录状态。
+- [ ] 用户可以退出登录并清除本地登录状态。
+- [ ] 密码校验规则与 Django 后端保持一致。
+
+
+## 任务 19：Flutter 场馆浏览与预约主流程拆分
+
+任务 19 拆分为 4 个较小任务，按顺序实现，每个子任务都应能在 Android 模拟器中单独验证。
+
+## 任务 19.1：Flutter 场馆列表与搜索
+
+**Type**: AFK
+
+**Blocked by**: 任务 18
+
+### What to build
+
+登录后的首页改为场馆列表页，调用 `GET /api/stadiums/` 展示公开场馆，并支持 `GET /api/stadiums/?q=...` 关键字搜索。
+
+### Acceptance criteria
+
+- [ ] 登录后默认进入场馆列表页。
+- [ ] 展示场馆名称、地址、电话和简介。
+- [ ] 支持关键字搜索。
+- [ ] 加载中、空列表、网络错误有反馈。
+- [ ] 保留退出登录入口。
+
+## 任务 19.2：Flutter 场馆详情、场地与可预约时段展示
+
+**Type**: AFK
+
+**Blocked by**: 任务 19.1
+
+### What to build
+
+点击场馆进入详情页，调用 `GET /api/stadiums/<id>/` 展示场馆信息、场地、价格和可预约时段。
+
+### Acceptance criteria
+
+- [ ] 场馆列表可以跳转详情页。
+- [ ] 详情页展示场馆名称、地址、电话、简介。
+- [ ] 展示场地编号、类型、价格。
+- [ ] 展示可预约日期、开始时间、结束时间。
+- [ ] 无可预约时段时显示空状态。
+
+## 任务 19.3：Flutter 提交预约
+
+**Type**: AFK
+
+**Blocked by**: 任务 19.2
+
+### What to build
+
+用户选择可预约时段后调用 `POST /api/reservations/` 提交预约。后端继续负责冲突和权限校验。
+
+### Acceptance criteria
+
+- [ ] 可预约时段旁显示预约按钮。
+- [ ] 提交前有确认提示。
+- [ ] 成功后显示反馈并刷新详情数据。
+- [ ] 后端失败原因能显示给用户。
+
+## 任务 19.4：Flutter 我的预约与取消预约
+
+**Type**: AFK
+
+**Blocked by**: 任务 19.3
+
+### What to build
+
+新增我的预约页，调用 `GET /api/reservations/mine/` 展示预约记录，调用 `POST /api/reservations/<id>/cancel/` 取消可取消的预约。
+
+### Acceptance criteria
+
+- [ ] 提供我的预约入口。
+- [ ] 展示场馆、场地、日期、时间段和状态。
+- [ ] 待审核或已通过预约可取消。
+- [ ] 取消前有确认提示，取消后刷新状态。
+- [ ] 空列表、加载中、网络错误有反馈。
+
+## 任务 20：Flutter 评论展示与提交
+
+**Type**: AFK
+
+**Blocked by**: 任务 19.4
+
+**User stories covered**: 40, 41, 42, 43, 44, 45
+
+### What to build
+
+实现 Android App 中的评论列表和发表评论功能。普通用户可以查看已审核通过的评论，可以提交自己的评论；评论审核仍由系统管理员在 Web 端完成。
+
+### Acceptance criteria
+
+- [ ] 场馆详情页展示已审核通过的评论。
+- [ ] 普通用户登录后可以提交评论。
+- [ ] 评论提交后进入待审核状态。
+- [ ] 评论内容校验失败时 App 显示错误反馈。
+- [ ] 用户可以删除自己的评论。
+- [ ] 未登录用户只能查看评论，不能提交评论。
+
+## 任务 21：Android 打包与真机测试
+
+**Type**: AFK
+
+**Blocked by**: 任务 20
+
+**User stories covered**: 46, 47, 48, 49, 50
+
+### What to build
+
+完成 Flutter Android App 的打包、安装和真机测试，形成可用于课程演示和论文截图的移动端版本。
+
+### Acceptance criteria
+
+- [ ] 可以生成 Android APK 安装包。
+- [ ] APK 可以安装到 Android 真机或模拟器。
+- [ ] 真机环境可以完成登录、场馆浏览、预约、取消预约、评论提交。
+- [ ] 移动端主流程截图已整理，可用于论文或答辩材料。
+- [ ] 文档记录打包命令、APK 输出位置和测试账号。
+- [ ] Web 管理端和 Android 普通用户端可以配合完成完整演示流程。
+
+
+## 任务 22：收藏场馆管理
+
+**Type**: AFK
+
+**Blocked by**: 任务 19.2
+
+**User stories covered**: 14, 15, 46, 47
+
+### What to build
+
+根据需求获取报告中的“收藏管理”，实现普通用户收藏和取消收藏体育场馆。普通用户可以在场馆详情页收藏场馆，可以查看自己的收藏场馆列表，也可以取消收藏。该能力后续应同时支持 Web 端和 Android 端。
+
+### Acceptance criteria
+
+- [ ] 普通用户可以收藏已审核且开放的场馆。
+- [ ] 普通用户可以取消收藏已收藏场馆。
+- [ ] 普通用户可以查看自己的收藏场馆列表。
+- [ ] 同一用户不能重复收藏同一场馆。
+- [ ] 已删除、未审核、关闭或申请删除的场馆不应出现在可收藏列表中。
+- [ ] Android API 覆盖收藏、取消收藏、我的收藏列表。
+- [ ] 自动化测试覆盖收藏、重复收藏、取消收藏和权限边界。
+
+## 任务 23：性能指标、数据一致性与异常处理验收
+
+**Type**: AFK
+
+**Blocked by**: 任务 21
+
+**User stories covered**: 48, 49, 50
+
+### What to build
+
+根据需求获取报告中的性能规定和故障处理要求，对主要业务路径做上线前补充验收。重点关注响应时间、输入校验、数据库一致性、预约冲突、删除场地或场馆时的关联预约处理，以及错误提示可理解性。
+
+### Acceptance criteria
+
+- [ ] 主要查询和提交接口在本地测试环境中响应时间符合课程文档约束的合理目标。
+- [ ] 用户信息、场馆信息、场地信息、预约信息、评论输入校验失败时都有明确反馈。
+- [ ] 预约冲突、时段冲突、重复收藏等数据一致性规则有自动化测试。
+- [ ] 删除或停用场馆/场地时，对未完成预约的处理规则明确并有测试覆盖。
+- [ ] 数据库异常或网络异常时，Web 端和 Android 端都有可理解错误反馈。
+- [ ] README 或诊断文档记录最终验收命令、测试账号和主要演示路径。
+
 ## 建议里程碑
 
 ### Milestone 1：项目可运行
@@ -344,3 +595,19 @@
 - 任务 12
 - 任务 14
 - 任务 15
+### Milestone 5：Android 移动端
+
+- 任务 16
+- 任务 17
+- 任务 18
+- 任务 19.1
+- 任务 19.2
+- 任务 19.3
+- 任务 19.4
+- 任务 20
+- 任务 21
+
+### Milestone 6：需求补齐与最终验收
+
+- 任务 22
+- 任务 23
