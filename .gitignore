@@ -10,3 +10,5 @@ staticfiles/
 media/
 .vscode/
 *.docx
+.docx
+.txt
