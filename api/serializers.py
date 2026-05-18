@@ -110,6 +110,28 @@ class AccountCancelSerializer(serializers.Serializer):
         return user
 
 
+class SystemUserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['nickname', 'role', 'is_active', 'is_cancelled']
+
+    def validate(self, attrs):
+        is_cancelled = attrs.get('is_cancelled')
+        is_active = attrs.get('is_active')
+        if is_cancelled is True:
+            attrs['is_active'] = False
+        elif is_cancelled is False and is_active is None and self.instance and not self.instance.is_active:
+            attrs['is_active'] = self.instance.is_active
+        return attrs
+
+    def save(self, **kwargs):
+        user = super().save(**kwargs)
+        if user.is_cancelled and user.is_active:
+            user.is_active = False
+            user.save(update_fields=['is_active'])
+        return user
+
+
 class RegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     nickname = serializers.CharField(max_length=50, required=False, allow_blank=True)
@@ -177,6 +199,44 @@ class TimeSlotSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class TimeSlotManageSerializer(ApiValidationMixin, serializers.ModelSerializer):
+    field_number = serializers.CharField(source='field.number', read_only=True)
+    field_type = serializers.CharField(source='field.field_type', read_only=True)
+    stadium_name = serializers.CharField(source='field.stadium.name', read_only=True)
+
+    class Meta:
+        model = TimeSlot
+        fields = [
+            'id',
+            'field',
+            'field_number',
+            'field_type',
+            'stadium_name',
+            'date',
+            'start_time',
+            'end_time',
+            'is_available',
+        ]
+        read_only_fields = ['id', 'field', 'field_number', 'field_type', 'stadium_name']
+
+    def create(self, validated_data):
+        time_slot = TimeSlot(**validated_data)
+        try:
+            time_slot.save()
+        except DjangoValidationError as exc:
+            self._raise_serializer_error(exc)
+        return time_slot
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        try:
+            instance.save()
+        except DjangoValidationError as exc:
+            self._raise_serializer_error(exc)
+        return instance
+
+
 class FieldSerializer(serializers.ModelSerializer):
     time_slots = serializers.SerializerMethodField()
 
@@ -191,11 +251,58 @@ class FieldSerializer(serializers.ModelSerializer):
         return TimeSlotSerializer(slots, many=True).data
 
 
+class FieldManageSerializer(ApiValidationMixin, serializers.ModelSerializer):
+    stadium_name = serializers.CharField(source='stadium.name', read_only=True)
+
+    class Meta:
+        model = Field
+        fields = [
+            'id',
+            'stadium',
+            'stadium_name',
+            'field_type',
+            'number',
+            'is_active',
+            'price_per_hour',
+        ]
+        read_only_fields = ['id', 'stadium', 'stadium_name']
+
+
 class StadiumListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stadium
         fields = ['id', 'name', 'address', 'phone_number', 'information']
         read_only_fields = fields
+
+
+class StadiumAuditSerializer(serializers.ModelSerializer):
+    owner_nickname = serializers.CharField(source='owner.nickname', read_only=True)
+    owner_phone_number = serializers.CharField(source='owner.phone_number', read_only=True)
+
+    class Meta:
+        model = Stadium
+        fields = [
+            'id',
+            'name',
+            'address',
+            'phone_number',
+            'information',
+            'audit_status',
+            'is_open',
+            'deletion_requested',
+            'owner_nickname',
+            'owner_phone_number',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+
+
+class StadiumManageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stadium
+        fields = ['id', 'name', 'address', 'phone_number', 'information', 'audit_status', 'is_open', 'deletion_requested']
+        read_only_fields = ['id', 'audit_status', 'is_open', 'deletion_requested']
 
 
 class StadiumDetailSerializer(serializers.ModelSerializer):
@@ -213,11 +320,16 @@ class StadiumDetailSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     user_nickname = serializers.CharField(source='user.nickname', read_only=True)
+    user_phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+    stadium_name = serializers.CharField(source='stadium.name', read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'stadium', 'user_nickname', 'content', 'audit_status', 'created_at']
-        read_only_fields = ['id', 'user_nickname', 'audit_status', 'created_at']
+        fields = [
+            'id', 'user', 'stadium', 'stadium_name', 'user_nickname', 'user_phone_number',
+            'content', 'audit_status', 'created_at',
+        ]
+        read_only_fields = ['id', 'user', 'stadium_name', 'user_nickname', 'user_phone_number', 'audit_status', 'created_at']
 
 
 class CommentCreateSerializer(ApiValidationMixin, serializers.ModelSerializer):

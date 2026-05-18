@@ -16,6 +16,9 @@ class AuthState extends ChangeNotifier {
   static const _accessKey = 'auth.access';
   static const _refreshKey = 'auth.refresh';
   static const _userKey = 'auth.user';
+  static const _rememberedPhoneKey = 'auth.remembered_phone';
+  static const _rememberedPasswordKey = 'auth.remembered_password';
+  static const _rememberPasswordKey = 'auth.remember_password';
 
   final ApiClient client;
   late final AuthApi api;
@@ -23,6 +26,9 @@ class AuthState extends ChangeNotifier {
   AppUser? user;
   String? accessToken;
   String? refreshToken;
+  String rememberedPhoneNumber = '';
+  String rememberedPassword = '';
+  bool rememberPassword = false;
   bool isLoading = true;
   String? errorMessage;
 
@@ -32,6 +38,9 @@ class AuthState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     accessToken = prefs.getString(_accessKey);
     refreshToken = prefs.getString(_refreshKey);
+    rememberedPhoneNumber = prefs.getString(_rememberedPhoneKey) ?? '';
+    rememberedPassword = prefs.getString(_rememberedPasswordKey) ?? '';
+    rememberPassword = prefs.getBool(_rememberPasswordKey) ?? false;
     final userJson = prefs.getString(_userKey);
     if (userJson != null) {
       user = AppUser.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
@@ -51,17 +60,25 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> login(String phoneNumber, String password) async {
+  Future<bool> login(
+    String phoneNumber,
+    String password, {
+    required bool rememberPassword,
+  }) async {
     errorMessage = null;
     notifyListeners();
     try {
+      final trimmedPhoneNumber = phoneNumber.trim();
       final result = await api.login(
-        phoneNumber: phoneNumber.trim(),
+        phoneNumber: trimmedPhoneNumber,
         password: password,
       );
       accessToken = result.access;
       refreshToken = result.refresh;
       user = result.user;
+      rememberedPhoneNumber = trimmedPhoneNumber;
+      this.rememberPassword = rememberPassword;
+      rememberedPassword = rememberPassword ? password : '';
       client.setAccessToken(accessToken);
       await _persist();
       notifyListeners();
@@ -197,6 +214,13 @@ class AuthState extends ChangeNotifier {
     }
     if (user != null) {
       await prefs.setString(_userKey, jsonEncode(user!.toJson()));
+    }
+    await prefs.setString(_rememberedPhoneKey, rememberedPhoneNumber);
+    await prefs.setBool(_rememberPasswordKey, rememberPassword);
+    if (rememberPassword && rememberedPassword.isNotEmpty) {
+      await prefs.setString(_rememberedPasswordKey, rememberedPassword);
+    } else {
+      await prefs.remove(_rememberedPasswordKey);
     }
   }
 

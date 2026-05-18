@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import UserRole
@@ -12,6 +13,12 @@ class StadiumAuditStatus(models.TextChoices):
     REJECTED = 'rejected', _('不通过')
 
 
+mobile_phone_validator = RegexValidator(
+    regex=r'^1\d{10}$',
+    message='联系电话必须是11位手机号',
+)
+
+
 class Stadium(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -21,7 +28,7 @@ class Stadium(models.Model):
     )
     name = models.CharField('场馆名称', max_length=100)
     address = models.CharField('场馆地址', max_length=255)
-    phone_number = models.CharField('联系电话', max_length=20)
+    phone_number = models.CharField('联系电话', max_length=20, validators=[mobile_phone_validator])
     information = models.TextField('场馆简介', blank=True)
     audit_status = models.CharField(
         '审核状态',
@@ -46,15 +53,25 @@ class Stadium(models.Model):
         if self.owner_id and self.owner.role != UserRole.STADIUM_ADMIN:
             raise ValidationError('只有场馆管理员可以负责场馆')
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def submit_for_review(self):
         self.audit_status = StadiumAuditStatus.PENDING
         self.is_open = False
-        self.save(update_fields=['audit_status', 'is_open', 'updated_at'])
+        type(self).objects.filter(pk=self.pk).update(
+            audit_status=self.audit_status,
+            is_open=self.is_open,
+        )
 
     def request_deletion(self):
         self.deletion_requested = True
         self.audit_status = StadiumAuditStatus.PENDING
-        self.save(update_fields=['deletion_requested', 'audit_status', 'updated_at'])
+        type(self).objects.filter(pk=self.pk).update(
+            deletion_requested=self.deletion_requested,
+            audit_status=self.audit_status,
+        )
 
     def approve(self):
         if self.deletion_requested:
@@ -63,7 +80,10 @@ class Stadium(models.Model):
 
         self.audit_status = StadiumAuditStatus.APPROVED
         self.is_open = True
-        self.save(update_fields=['audit_status', 'is_open', 'updated_at'])
+        type(self).objects.filter(pk=self.pk).update(
+            audit_status=self.audit_status,
+            is_open=self.is_open,
+        )
         return 'approved'
 
     def reject(self):
@@ -74,7 +94,11 @@ class Stadium(models.Model):
         else:
             self.audit_status = StadiumAuditStatus.REJECTED
             self.is_open = False
-        self.save(update_fields=['deletion_requested', 'audit_status', 'is_open', 'updated_at'])
+        type(self).objects.filter(pk=self.pk).update(
+            deletion_requested=self.deletion_requested,
+            audit_status=self.audit_status,
+            is_open=self.is_open,
+        )
 
 
 class Field(models.Model):

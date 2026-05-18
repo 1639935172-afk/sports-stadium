@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../state/auth_state.dart';
+import '../widgets/app_feedback.dart';
 import 'password_reset_screen.dart';
 import 'register_screen.dart';
 
@@ -15,9 +16,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController(text: '18800000003');
-  final _passwordController = TextEditingController(text: 'DemoPass123');
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  late bool _rememberPassword;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = widget.auth.rememberedPhoneNumber;
+    _passwordController.text = widget.auth.rememberedPassword;
+    _rememberPassword = widget.auth.rememberPassword;
+  }
 
   @override
   void dispose() {
@@ -32,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final ok = await widget.auth.login(
       _phoneController.text,
       _passwordController.text,
+      rememberPassword: _rememberPassword,
     );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -41,9 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppFeedback.showMessage(context, message, isError: true);
   }
 
   @override
@@ -57,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
                 key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -79,6 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: '手机号',
                         prefixIcon: Icon(Icons.phone_outlined),
                       ),
+                      textInputAction: TextInputAction.next,
                       validator: (value) {
                         final text = value?.trim() ?? '';
                         if (text.length != 11 || int.tryParse(text) == null) {
@@ -95,18 +106,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: '密码',
                         prefixIcon: Icon(Icons.lock_outline),
                       ),
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submitting ? null : _submit(),
                       validator: (value) =>
                           (value == null || value.isEmpty) ? '请输入密码' : null,
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _rememberPassword,
+                      onChanged: _submitting
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _rememberPassword = value ?? false;
+                              });
+                            },
+                      title: const Text('记住密码'),
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _submitting ? null : _submit,
                       child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const AppLoadingIcon(size: 20)
                           : const Text('登录'),
                     ),
                     const SizedBox(height: 12),

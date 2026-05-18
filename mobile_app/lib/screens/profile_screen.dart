@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../state/auth_state.dart';
+import '../widgets/app_feedback.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.auth});
@@ -72,12 +73,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (nickname == null) return;
     final success = await widget.auth.updateProfile(nickname: nickname);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? '个人资料已更新。' : widget.auth.errorMessage ?? '修改资料失败。',
-        ),
-      ),
+    AppFeedback.showMessage(
+      context,
+      success ? '个人资料已更新。' : widget.auth.errorMessage ?? '修改资料失败。',
+      isError: !success,
     );
     if (success) setState(() {});
   }
@@ -145,12 +144,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     newPassword2Controller.dispose();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? '密码已修改。' : widget.auth.errorMessage ?? '修改密码失败。',
-        ),
-      ),
+    AppFeedback.showMessage(
+      context,
+      success ? '密码已修改。' : widget.auth.errorMessage ?? '修改密码失败。',
+      isError: !success,
     );
   }
 
@@ -199,12 +196,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     passwordController.dispose();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? '账号已注销。' : widget.auth.errorMessage ?? '注销账号失败。',
-        ),
-      ),
+    AppFeedback.showMessage(
+      context,
+      success ? '账号已注销。' : widget.auth.errorMessage ?? '注销账号失败。',
+      isError: !success,
     );
     if (success) Navigator.of(context).pop();
   }
@@ -225,7 +220,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
               ],
               if (user == null)
-                const _EmptyPanel()
+                const AppMessagePanel(
+                  icon: Icons.account_circle_outlined,
+                  message: '暂无个人资料。',
+                  topPadding: 0,
+                )
               else
                 _ProfileCard(
                   user: user,
@@ -237,11 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               FilledButton.icon(
                 onPressed: isLoading ? null : _refreshProfile,
                 icon: isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const AppLoadingIcon()
                     : const Icon(Icons.refresh),
                 label: const Text('刷新资料'),
               ),
@@ -369,30 +364,17 @@ class _ErrorPanel extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Icon(Icons.cloud_off, size: 36),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
-            ),
-          ],
+        child: AppMessagePanel(
+          icon: Icons.cloud_off,
+          message: message,
+          action: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('重试'),
+          ),
+          topPadding: 0,
         ),
       ),
-    );
-  }
-}
-
-class _EmptyPanel extends StatelessWidget {
-  const _EmptyPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(padding: EdgeInsets.all(16), child: Text('暂无个人资料。')),
     );
   }
 }

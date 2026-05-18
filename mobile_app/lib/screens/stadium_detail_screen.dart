@@ -5,6 +5,7 @@ import '../api/reservation_api.dart';
 import '../api/stadium_api.dart';
 import '../models/comment.dart';
 import '../models/stadium.dart';
+import '../widgets/app_feedback.dart';
 
 class StadiumDetailScreen extends StatefulWidget {
   const StadiumDetailScreen({
@@ -88,15 +89,11 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
     try {
       await widget.reservationApi.create(timeSlotId: timeSlotId);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('预约已提交，等待场馆管理员审核。')));
+      AppFeedback.showMessage(context, '预约已提交，等待场馆管理员审核。');
       await _loadDetail();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('预约提交失败，请确认时段仍可预约。')));
+      AppFeedback.showMessage(context, '预约提交失败，请确认时段仍可预约。', isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -135,9 +132,7 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
   Future<void> _submitComment() async {
     final content = commentController.text.trim();
     if (content.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请输入评论内容。')));
+      AppFeedback.showMessage(context, '请输入评论内容。', isError: true);
       return;
     }
 
@@ -153,15 +148,11 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
       if (!mounted) return;
       commentController.clear();
       FocusScope.of(context).unfocus();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('评论已提交，等待系统管理员审核。')));
+      AppFeedback.showMessage(context, '评论已提交，等待系统管理员审核。');
       await _loadDetail();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('评论提交失败，请稍后重试。')));
+      AppFeedback.showMessage(context, '评论提交失败，请稍后重试。', isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -182,12 +173,9 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
               if (isLoading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 120),
-                  child: Center(child: CircularProgressIndicator()),
-                )
+                const AppPageLoading()
               else if (errorMessage != null)
-                _MessagePanel(
+                AppMessagePanel(
                   icon: Icons.cloud_off,
                   message: errorMessage!,
                   action: TextButton.icon(
@@ -215,7 +203,7 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
                     const SizedBox(height: 12),
                   ]
                 else
-                  const _MessagePanel(
+                  const AppMessagePanel(
                     icon: Icons.event_busy,
                     message: '暂无可预约场地。',
                   ),
@@ -231,7 +219,7 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
                   const SizedBox(height: 12),
                 ],
                 if (comments.isEmpty)
-                  const _MessagePanel(
+                  const AppMessagePanel(
                     icon: Icons.rate_review_outlined,
                     message: '暂无已审核评论。',
                   )
@@ -284,11 +272,7 @@ class _CommentComposer extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: isSubmitting ? null : onSubmit,
                 icon: isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const AppLoadingIcon()
                     : const Icon(Icons.send),
                 label: Text(isSubmitting ? '提交中' : '提交评论'),
               ),
@@ -446,13 +430,7 @@ class _FieldCard extends StatelessWidget {
                                   ? () => onReserve(slot)
                                   : null,
                               child: submittingSlotId == slot.id
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
+                                  ? const AppLoadingIcon()
                                   : const Text('预约'),
                             ),
                           ],
@@ -485,31 +463,6 @@ class _IconText extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(child: Text(text.isEmpty ? '未填写' : text)),
         ],
-      ),
-    );
-  }
-}
-
-class _MessagePanel extends StatelessWidget {
-  const _MessagePanel({required this.icon, required this.message, this.action});
-
-  final IconData icon;
-  final String message;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 72),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 8), action!],
-          ],
-        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../state/auth_state.dart';
+import '../widgets/app_feedback.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, required this.auth});
@@ -43,13 +44,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     setState(() => _submitting = false);
     if (ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('注册成功，请登录')));
+      AppFeedback.showMessage(context, '注册成功，请登录');
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.auth.errorMessage ?? '注册失败')),
+      AppFeedback.showMessage(
+        context,
+        widget.auth.errorMessage ?? '注册失败',
+        isError: true,
       );
     }
   }
@@ -61,11 +62,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Form(
+                key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -73,6 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: '手机号',
                     prefixIcon: Icon(Icons.phone_outlined),
                   ),
+                  textInputAction: TextInputAction.next,
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.length != 11 || int.tryParse(text) == null) {
@@ -88,6 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: '昵称',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -97,6 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: '密码',
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
+                  textInputAction: TextInputAction.next,
                   validator: (value) =>
                       (value == null || value.length < 8) ? '密码至少8位' : null,
                 ),
@@ -108,6 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: '确认密码',
                     prefixIcon: Icon(Icons.lock_reset),
                   ),
+                  textInputAction: TextInputAction.next,
                   validator: (value) =>
                       value != _password1Controller.text ? '两次输入的密码不一致' : null,
                 ),
@@ -120,6 +129,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     helperText: '开发环境验证码：123456',
                     prefixIcon: Icon(Icons.verified_outlined),
                   ),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submitting ? null : _submit(),
                   validator: (value) =>
                       (value == null || value.isEmpty) ? '请输入验证码' : null,
                 ),
@@ -127,14 +138,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 FilledButton(
                   onPressed: _submitting ? null : _submit,
                   child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const AppLoadingIcon(size: 20)
                       : const Text('注册'),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

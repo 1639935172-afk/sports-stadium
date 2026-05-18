@@ -1,31 +1,31 @@
 import 'package:flutter/material.dart';
 
-import '../api/reservation_api.dart';
-import '../models/reservation.dart';
+import '../api/comment_api.dart';
+import '../models/comment.dart';
 import '../widgets/app_feedback.dart';
 
-class MyReservationsScreen extends StatefulWidget {
-  const MyReservationsScreen({super.key, required this.api});
+class MyCommentsScreen extends StatefulWidget {
+  const MyCommentsScreen({super.key, required this.api});
 
-  final ReservationApi api;
+  final CommentApi api;
 
   @override
-  State<MyReservationsScreen> createState() => _MyReservationsScreenState();
+  State<MyCommentsScreen> createState() => _MyCommentsScreenState();
 }
 
-class _MyReservationsScreenState extends State<MyReservationsScreen> {
-  var reservations = <Reservation>[];
+class _MyCommentsScreenState extends State<MyCommentsScreen> {
+  var comments = <StadiumComment>[];
   var isLoading = true;
-  var cancellingReservationId = 0;
+  var deletingCommentId = 0;
   String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadReservations();
+    _loadComments();
   }
 
-  Future<void> _loadReservations() async {
+  Future<void> _loadComments() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -35,36 +35,33 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
       final result = await widget.api.mine();
       if (!mounted) return;
       setState(() {
-        reservations = result;
+        comments = result;
         isLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         isLoading = false;
-        errorMessage = '无法加载我的预约，请确认 Django 服务已启动。';
+        errorMessage = '无法加载我的评论，请确认 Django 服务已启动。';
       });
     }
   }
 
-  Future<void> _confirmCancel(Reservation reservation) async {
+  Future<void> _confirmDelete(StadiumComment comment) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('取消预约'),
-          content: Text(
-            '确认取消 ${reservation.stadiumName}，'
-            '${reservation.date} ${_trimSeconds(reservation.startTime)}-${_trimSeconds(reservation.endTime)} 的预约？',
-          ),
+          title: const Text('删除评论'),
+          content: Text('确认删除你在“${comment.stadiumName}”下的这条评论？'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('保留预约'),
+              child: const Text('取消'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('确认取消'),
+              child: const Text('确认删除'),
             ),
           ],
         );
@@ -72,27 +69,27 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     );
 
     if (confirmed == true) {
-      await _cancelReservation(reservation.id);
+      await _deleteComment(comment.id);
     }
   }
 
-  Future<void> _cancelReservation(int reservationId) async {
+  Future<void> _deleteComment(int commentId) async {
     setState(() {
-      cancellingReservationId = reservationId;
+      deletingCommentId = commentId;
     });
 
     try {
-      await widget.api.cancel(reservationId: reservationId);
+      await widget.api.deleteMine(commentId: commentId);
       if (!mounted) return;
-      AppFeedback.showMessage(context, '预约已取消。');
-      await _loadReservations();
+      AppFeedback.showMessage(context, '评论已删除。');
+      await _loadComments();
     } catch (_) {
       if (!mounted) return;
-      AppFeedback.showMessage(context, '取消预约失败，请稍后重试。', isError: true);
+      AppFeedback.showMessage(context, '删除评论失败，请稍后重试。', isError: true);
     } finally {
       if (mounted) {
         setState(() {
-          cancellingReservationId = 0;
+          deletingCommentId = 0;
         });
       }
     }
@@ -101,10 +98,10 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的预约')),
+      appBar: AppBar(title: const Text('我的评论')),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadReservations,
+          onRefresh: _loadComments,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
@@ -115,21 +112,23 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                   icon: Icons.cloud_off,
                   message: errorMessage!,
                   action: TextButton.icon(
-                    onPressed: _loadReservations,
+                    onPressed: _loadComments,
                     icon: const Icon(Icons.refresh),
                     label: const Text('重试'),
                   ),
                 )
-              else if (reservations.isEmpty)
-                const AppMessagePanel(icon: Icons.event_busy, message: '暂无预约记录。')
+              else if (comments.isEmpty)
+                const AppMessagePanel(
+                  icon: Icons.rate_review_outlined,
+                  message: '暂无评论记录。',
+                )
               else
-                for (final reservation in reservations) ...[
-                  _ReservationCard(
-                    reservation: reservation,
-                    isCancelling: cancellingReservationId == reservation.id,
-                    canCancel:
-                        cancellingReservationId == 0 && _canCancel(reservation),
-                    onCancel: () => _confirmCancel(reservation),
+                for (final comment in comments) ...[
+                  _CommentCard(
+                    comment: comment,
+                    isDeleting: deletingCommentId == comment.id,
+                    canDelete: deletingCommentId == 0,
+                    onDelete: () => _confirmDelete(comment),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -139,24 +138,20 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
       ),
     );
   }
-
-  bool _canCancel(Reservation reservation) {
-    return reservation.status == 'pending' || reservation.status == 'approved';
-  }
 }
 
-class _ReservationCard extends StatelessWidget {
-  const _ReservationCard({
-    required this.reservation,
-    required this.isCancelling,
-    required this.canCancel,
-    required this.onCancel,
+class _CommentCard extends StatelessWidget {
+  const _CommentCard({
+    required this.comment,
+    required this.isDeleting,
+    required this.canDelete,
+    required this.onDelete,
   });
 
-  final Reservation reservation;
-  final bool isCancelling;
-  final bool canCancel;
-  final VoidCallback onCancel;
+  final StadiumComment comment;
+  final bool isDeleting;
+  final bool canDelete;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -171,37 +166,33 @@ class _ReservationCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    reservation.stadiumName,
+                    comment.stadiumName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                _StatusBadge(status: reservation.status),
+                _StatusBadge(status: comment.auditStatus),
               ],
             ),
-            const SizedBox(height: 10),
-            _IconText(
-              icon: Icons.sports_basketball_outlined,
-              text: '${reservation.fieldType} ${reservation.fieldNumber}',
-            ),
-            _IconText(
-              icon: Icons.schedule,
-              text:
-                  '${reservation.date} ${_trimSeconds(reservation.startTime)}-${_trimSeconds(reservation.endTime)}',
-            ),
-            if (reservation.status == 'pending' ||
-                reservation.status == 'approved') ...[
+            if (comment.createdAt.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: canCancel ? onCancel : null,
-                  icon: isCancelling
-                      ? const AppLoadingIcon()
-                      : const Icon(Icons.event_busy),
-                  label: Text(isCancelling ? '取消中' : '取消预约'),
-                ),
+              _IconText(
+                icon: Icons.schedule,
+                text: _formatDateTime(comment.createdAt),
               ),
             ],
+            const SizedBox(height: 10),
+            Text(comment.content),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: canDelete ? onDelete : null,
+                icon: isDeleting
+                    ? const AppLoadingIcon()
+                    : const Icon(Icons.delete_outline),
+                label: Text(isDeleting ? '删除中' : '删除评论'),
+              ),
+            ),
           ],
         ),
       ),
@@ -221,7 +212,6 @@ class _StatusBadge extends StatelessWidget {
       'pending' => ('待审核', colorScheme.primary),
       'approved' => ('已通过', Colors.green),
       'rejected' => ('已驳回', colorScheme.error),
-      'cancelled' => ('已取消', colorScheme.outline),
       _ => (status, colorScheme.outline),
     };
 
@@ -256,7 +246,8 @@ class _IconText extends StatelessWidget {
   }
 }
 
-String _trimSeconds(String value) {
-  if (value.length >= 5) return value.substring(0, 5);
-  return value;
+String _formatDateTime(String value) {
+  final normalized = value.replaceFirst('T', ' ');
+  if (normalized.length >= 16) return normalized.substring(0, 16);
+  return normalized;
 }

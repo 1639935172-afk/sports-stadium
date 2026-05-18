@@ -59,7 +59,7 @@ class Command(BaseCommand):
             name='演示综合体育馆',
             defaults={
                 'address': '演示市中心路 88 号',
-                'phone_number': '02512345678',
+                'phone_number': '13812345678',
                 'information': '用于演示场馆提交、审核、预约、评论的完整主流程。',
                 'audit_status': StadiumAuditStatus.APPROVED,
                 'is_open': True,

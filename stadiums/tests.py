@@ -39,7 +39,7 @@ class StadiumWorkflowTests(TestCase):
         payload = {
             'name': '南航体育馆',
             'address': '南京市江宁区将军大道',
-            'phone_number': '02512345678',
+            'phone_number': '13812345678',
             'information': '综合体育场馆',
         }
         payload.update(overrides)
@@ -61,6 +61,18 @@ class StadiumWorkflowTests(TestCase):
         self.assertEqual(stadium.owner, self.stadium_admin)
         self.assertEqual(stadium.audit_status, StadiumAuditStatus.PENDING)
         self.assertFalse(stadium.is_open)
+
+    def test_stadium_phone_number_must_be_eleven_digit_mobile(self):
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:create'),
+            self.stadium_payload(phone_number='12345'),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '联系电话必须是11位手机号')
+        self.assertFalse(Stadium.objects.exists())
 
     def test_ordinary_user_cannot_submit_stadium(self):
         self.client.force_login(self.ordinary_user)
@@ -147,6 +159,26 @@ class StadiumWorkflowTests(TestCase):
         self.assertRedirects(response, reverse('stadiums:audit_list'))
         self.assertFalse(Stadium.objects.filter(pk=stadium.pk).exists())
 
+    def test_can_request_deletion_for_legacy_stadium_with_invalid_phone_number(self):
+        stadium = self.create_pending_stadium()
+        Stadium.objects.filter(pk=stadium.pk).update(
+            phone_number='198',
+            audit_status=StadiumAuditStatus.APPROVED,
+            is_open=True,
+        )
+        stadium.refresh_from_db()
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:delete_request', args=[stadium.pk]),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:my_stadiums'))
+        stadium.refresh_from_db()
+        self.assertTrue(stadium.deletion_requested)
+        self.assertEqual(stadium.audit_status, StadiumAuditStatus.PENDING)
+
     def test_rejecting_deletion_request_keeps_approved_stadium(self):
         stadium = self.create_pending_stadium()
         stadium.approve()
@@ -181,7 +213,7 @@ class PublicStadiumTests(TestCase):
             'owner': self.stadium_admin,
             'name': name,
             'address': f'{name} address',
-            'phone_number': '02512345678',
+            'phone_number': '13812345678',
             'information': f'{name} information',
             'audit_status': StadiumAuditStatus.APPROVED,
             'is_open': True,
@@ -268,7 +300,7 @@ class FieldManagementTests(TestCase):
             owner=self.stadium_admin,
             name='Approved Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345678',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,
@@ -277,14 +309,14 @@ class FieldManagementTests(TestCase):
             owner=self.stadium_admin,
             name='Pending Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345679',
             information='Info',
         )
         self.other_stadium = Stadium.objects.create(
             owner=self.other_stadium_admin,
             name='Other Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345680',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,
@@ -418,7 +450,7 @@ class TimeSlotManagementTests(TestCase):
             owner=self.stadium_admin,
             name='Slot Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345681',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,
@@ -427,7 +459,7 @@ class TimeSlotManagementTests(TestCase):
             owner=self.other_stadium_admin,
             name='Other Slot Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345682',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,

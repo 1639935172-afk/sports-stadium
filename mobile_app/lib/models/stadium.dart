@@ -5,6 +5,13 @@ class Stadium {
     required this.address,
     required this.phoneNumber,
     required this.information,
+    this.auditStatus = '',
+    this.isOpen = false,
+    this.deletionRequested = false,
+    this.ownerNickname = '',
+    this.ownerPhoneNumber = '',
+    this.createdAt = '',
+    this.updatedAt = '',
   });
 
   final int id;
@@ -12,6 +19,13 @@ class Stadium {
   final String address;
   final String phoneNumber;
   final String information;
+  final String auditStatus;
+  final bool isOpen;
+  final bool deletionRequested;
+  final String ownerNickname;
+  final String ownerPhoneNumber;
+  final String createdAt;
+  final String updatedAt;
 
   factory Stadium.fromJson(Map<String, dynamic> json) {
     return Stadium(
@@ -20,6 +34,13 @@ class Stadium {
       address: json['address'] as String? ?? '',
       phoneNumber: json['phone_number'] as String? ?? '',
       information: json['information'] as String? ?? '',
+      auditStatus: json['audit_status'] as String? ?? '',
+      isOpen: json['is_open'] as bool? ?? false,
+      deletionRequested: json['deletion_requested'] as bool? ?? false,
+      ownerNickname: json['owner_nickname'] as String? ?? '',
+      ownerPhoneNumber: json['owner_phone_number'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+      updatedAt: json['updated_at'] as String? ?? '',
     );
   }
 }
@@ -54,15 +75,21 @@ class StadiumDetail extends Stadium {
 class StadiumField {
   const StadiumField({
     required this.id,
+    this.stadium = 0,
+    this.stadiumName = '',
     required this.fieldType,
     required this.number,
+    this.isActive = true,
     required this.pricePerHour,
     required this.timeSlots,
   });
 
   final int id;
+  final int stadium;
+  final String stadiumName;
   final String fieldType;
   final String number;
+  final bool isActive;
   final String pricePerHour;
   final List<TimeSlot> timeSlots;
 
@@ -70,8 +97,11 @@ class StadiumField {
     final slotsJson = json['time_slots'] as List<dynamic>? ?? <dynamic>[];
     return StadiumField(
       id: json['id'] as int,
+      stadium: json['stadium'] as int? ?? 0,
+      stadiumName: json['stadium_name'] as String? ?? '',
       fieldType: json['field_type'] as String? ?? '',
       number: json['number'] as String? ?? '',
+      isActive: json['is_active'] as bool? ?? true,
       pricePerHour: json['price_per_hour']?.toString() ?? '',
       timeSlots: slotsJson
           .map((item) => TimeSlot.fromJson(item as Map<String, dynamic>))

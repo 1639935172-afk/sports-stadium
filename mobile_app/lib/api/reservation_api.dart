@@ -24,9 +24,33 @@ class ReservationApi {
         .toList();
   }
 
+  Future<List<Reservation>> adminPending() async {
+    final response = await client.dio.get<List<dynamic>>(
+      '/reservations/admin/pending/',
+    );
+    final data = response.data ?? <dynamic>[];
+    return data
+        .map((item) => Reservation.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<Reservation> cancel({required int reservationId}) async {
     final response = await client.dio.post<Map<String, dynamic>>(
       '/reservations/$reservationId/cancel/',
+    );
+    return Reservation.fromJson(response.data ?? <String, dynamic>{});
+  }
+
+  Future<Reservation> approve({required int reservationId}) async {
+    final response = await client.dio.post<Map<String, dynamic>>(
+      '/reservations/$reservationId/approve/',
+    );
+    return Reservation.fromJson(response.data ?? <String, dynamic>{});
+  }
+
+  Future<Reservation> reject({required int reservationId}) async {
+    final response = await client.dio.post<Map<String, dynamic>>(
+      '/reservations/$reservationId/reject/',
     );
     return Reservation.fromJson(response.data ?? <String, dynamic>{});
   }

@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import '../api/comment_api.dart';
 import '../api/reservation_api.dart';
 import '../api/stadium_api.dart';
+import '../api/system_user_api.dart';
 import '../models/stadium.dart';
 import '../state/auth_state.dart';
+import '../widgets/app_feedback.dart';
+import 'admin_comment_audit_screen.dart';
+import 'admin_pending_reservations_screen.dart';
+import 'admin_stadium_audit_screen.dart';
+import 'my_comments_screen.dart';
 import 'my_reservations_screen.dart';
+import 'my_stadiums_screen.dart';
 import 'profile_screen.dart';
 import 'stadium_detail_screen.dart';
+import 'system_user_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.auth});
@@ -22,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final StadiumApi stadiumApi;
   late final ReservationApi reservationApi;
   late final CommentApi commentApi;
+  late final SystemUserApi systemUserApi;
   final searchController = TextEditingController();
 
   var stadiums = <Stadium>[];
@@ -29,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? errorMessage;
 
   bool get _isOrdinaryUser => widget.auth.user?.role == 'ordinary';
+  bool get _isStadiumAdmin => widget.auth.user?.role == 'stadium_admin';
+  bool get _isSystemAdmin => widget.auth.user?.role == 'system_admin';
 
   @override
   void initState() {
@@ -36,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     stadiumApi = StadiumApi(widget.auth.client);
     reservationApi = ReservationApi(widget.auth.client);
     commentApi = CommentApi(widget.auth.client);
+    systemUserApi = SystemUserApi(widget.auth.client);
     _loadStadiums();
   }
 
@@ -79,11 +91,47 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('场馆列表'),
         actions: [
+          if (_isStadiumAdmin)
+            IconButton(
+              tooltip: '我的场馆',
+              onPressed: _openMyStadiums,
+              icon: const Icon(Icons.storefront_outlined),
+            ),
+          if (_isStadiumAdmin)
+            IconButton(
+              tooltip: '预约审核',
+              onPressed: _openAdminPendingReservations,
+              icon: const Icon(Icons.fact_check_outlined),
+            ),
+          if (_isSystemAdmin)
+            IconButton(
+              tooltip: '场馆审核',
+              onPressed: _openAdminStadiumAudit,
+              icon: const Icon(Icons.approval_outlined),
+            ),
+          if (_isSystemAdmin)
+            IconButton(
+              tooltip: '评论审核',
+              onPressed: _openAdminCommentAudit,
+              icon: const Icon(Icons.rate_review_outlined),
+            ),
+          if (_isSystemAdmin)
+            IconButton(
+              tooltip: '用户管理',
+              onPressed: _openSystemUsers,
+              icon: const Icon(Icons.manage_accounts_outlined),
+            ),
           if (_isOrdinaryUser)
             IconButton(
               tooltip: '我的预约',
               onPressed: _openMyReservations,
               icon: const Icon(Icons.event_note_outlined),
+            ),
+          if (_isOrdinaryUser)
+            IconButton(
+              tooltip: '我的评论',
+              onPressed: _openMyComments,
+              icon: const Icon(Icons.chat_bubble_outline),
             ),
           IconButton(
             tooltip: '个人资料',
@@ -133,12 +181,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             if (isLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const AppPageLoading(topPadding: 80)
             else if (errorMessage != null)
-              _MessagePanel(
+              AppMessagePanel(
                 icon: Icons.cloud_off,
                 message: errorMessage!,
                 action: TextButton.icon(
@@ -148,7 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else if (stadiums.isEmpty)
-              const _MessagePanel(icon: Icons.search_off, message: '暂无符合条件的场馆。')
+              const AppMessagePanel(
+                icon: Icons.search_off,
+                message: '暂无符合条件的场馆。',
+              )
             else
               for (final stadium in stadiums) ...[
                 _StadiumCard(
@@ -190,6 +238,57 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openProfile() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ProfileScreen(auth: widget.auth)),
+    );
+  }
+
+  void _openMyComments() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyCommentsScreen(api: commentApi),
+      ),
+    );
+  }
+
+  void _openSystemUsers() {
+    final user = widget.auth.user;
+    if (user == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            SystemUserListScreen(api: systemUserApi, currentUserId: user.id),
+      ),
+    );
+  }
+
+  void _openAdminPendingReservations() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AdminPendingReservationsScreen(api: reservationApi),
+      ),
+    );
+  }
+
+  void _openAdminCommentAudit() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AdminCommentAuditScreen(api: commentApi),
+      ),
+    );
+  }
+
+  void _openAdminStadiumAudit() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AdminStadiumAuditScreen(api: stadiumApi),
+      ),
+    );
+  }
+
+  void _openMyStadiums() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyStadiumsScreen(api: stadiumApi),
+      ),
     );
   }
 }
@@ -258,31 +357,6 @@ class _IconText extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(child: Text(text.isEmpty ? '未填写' : text)),
         ],
-      ),
-    );
-  }
-}
-
-class _MessagePanel extends StatelessWidget {
-  const _MessagePanel({required this.icon, required this.message, this.action});
-
-  final IconData icon;
-  final String message;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 72),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 8), action!],
-          ],
-        ),
       ),
     );
   }
