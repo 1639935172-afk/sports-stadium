@@ -179,7 +179,7 @@ class _SystemUserListScreenState extends State<SystemUserListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('用户管理')),
+      appBar: AppBar(centerTitle: true, title: const Text('用户管理')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
