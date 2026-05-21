@@ -108,7 +108,7 @@ class _AdminPendingReservationsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('预约审核')),
+      appBar: AppBar(centerTitle: true, title: const Text('预约审核')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadReservations,

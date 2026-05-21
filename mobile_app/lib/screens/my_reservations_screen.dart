@@ -101,7 +101,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的预约')),
+      appBar: AppBar(centerTitle: true, title: const Text('我的预约')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadReservations,
@@ -121,7 +121,10 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                   ),
                 )
               else if (reservations.isEmpty)
-                const AppMessagePanel(icon: Icons.event_busy, message: '暂无预约记录。')
+                const AppMessagePanel(
+                  icon: Icons.event_busy,
+                  message: '暂无预约记录。',
+                )
               else
                 for (final reservation in reservations) ...[
                   _ReservationCard(

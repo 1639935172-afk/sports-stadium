@@ -165,7 +165,10 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(stadium?.name ?? widget.initialName)),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(stadium?.name ?? widget.initialName),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDetail,

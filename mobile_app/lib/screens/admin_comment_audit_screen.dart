@@ -98,7 +98,11 @@ class _AdminCommentAuditScreenState extends State<AdminCommentAuditScreen> {
       await _loadComments();
     } catch (_) {
       if (!mounted) return;
-      AppFeedback.showMessage(context, '$actionLabel评论失败，请稍后重试。', isError: true);
+      AppFeedback.showMessage(
+        context,
+        '$actionLabel评论失败，请稍后重试。',
+        isError: true,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -111,7 +115,7 @@ class _AdminCommentAuditScreenState extends State<AdminCommentAuditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('评论审核')),
+      appBar: AppBar(centerTitle: true, title: const Text('评论审核')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadComments,

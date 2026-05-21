@@ -208,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final user = widget.auth.user;
     return Scaffold(
-      appBar: AppBar(title: const Text('个人资料')),
+      appBar: AppBar(centerTitle: true, title: const Text('个人资料')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshProfile,

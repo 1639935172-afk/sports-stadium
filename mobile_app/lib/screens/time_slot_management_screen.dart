@@ -173,7 +173,7 @@ class _TimeSlotManagementScreenState extends State<TimeSlotManagementScreen> {
   Widget build(BuildContext context) {
     final title = '${widget.field.fieldType} ${widget.field.number}'.trim();
     return Scaffold(
-      appBar: AppBar(title: Text('$title - 时段管理')),
+      appBar: AppBar(centerTitle: true, title: Text('$title - 时段管理')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: widget.field.isActive ? _createTimeSlot : null,
         icon: const Icon(Icons.add_alarm_outlined),

@@ -70,7 +70,10 @@ class _StadiumFormScreenState extends State<StadiumFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? '编辑场馆' : '新增场馆')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(_isEditing ? '编辑场馆' : '新增场馆'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -82,62 +85,62 @@ class _StadiumFormScreenState extends State<StadiumFormScreen> {
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: '场馆名称'),
-                  maxLength: 100,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if ((value ?? '').trim().isEmpty) return '请输入场馆名称';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(labelText: '场馆地址'),
-                  maxLength: 255,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if ((value ?? '').trim().isEmpty) return '请输入场馆地址';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: '联系电话'),
-                  maxLength: 11,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    final text = (value ?? '').trim();
-                    if (text.isEmpty) return '请输入联系电话';
-                    if (text.length != 11 || int.tryParse(text) == null) {
-                      return '请输入11位手机号';
-                    }
-                    if (!text.startsWith('1')) {
-                      return '请输入11位手机号';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _informationController,
-                  decoration: const InputDecoration(labelText: '场馆简介'),
-                  minLines: 4,
-                  maxLines: 6,
-                  textInputAction: TextInputAction.newline,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _submit,
-                    child: Text(_isEditing ? '保存并重新提交审核' : '提交审核'),
-                  ),
-                ),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: '场馆名称'),
+                      maxLength: 100,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if ((value ?? '').trim().isEmpty) return '请输入场馆名称';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _addressController,
+                      decoration: const InputDecoration(labelText: '场馆地址'),
+                      maxLength: 255,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if ((value ?? '').trim().isEmpty) return '请输入场馆地址';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: '联系电话'),
+                      maxLength: 11,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        final text = (value ?? '').trim();
+                        if (text.isEmpty) return '请输入联系电话';
+                        if (text.length != 11 || int.tryParse(text) == null) {
+                          return '请输入11位手机号';
+                        }
+                        if (!text.startsWith('1')) {
+                          return '请输入11位手机号';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _informationController,
+                      decoration: const InputDecoration(labelText: '场馆简介'),
+                      minLines: 4,
+                      maxLines: 6,
+                      textInputAction: TextInputAction.newline,
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _submit,
+                        child: Text(_isEditing ? '保存并重新提交审核' : '提交审核'),
+                      ),
+                    ),
                   ],
                 ),
               ),

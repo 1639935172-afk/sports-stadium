@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 
 import '../api/comment_api.dart';
 import '../models/comment.dart';
@@ -38,11 +39,11 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
         comments = result;
         isLoading = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         isLoading = false;
-        errorMessage = '无法加载我的评论，请确认 Django 服务已启动。';
+        errorMessage = _readLoadError(error);
       });
     }
   }
@@ -98,7 +99,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的评论')),
+      appBar: AppBar(centerTitle: true, title: const Text('我的评论')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadComments,
@@ -244,6 +245,13 @@ class _IconText extends StatelessWidget {
       ),
     );
   }
+}
+
+String _readLoadError(Object error) {
+  if (error is DioException && error.response?.statusCode == 401) {
+    return '登录状态已失效，请退出后重新登录。';
+  }
+  return '无法加载我的评论，请确认 Django 服务已启动。';
 }
 
 String _formatDateTime(String value) {

@@ -195,7 +195,10 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.stadium.name} - 场地管理')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text('${widget.stadium.name} - 场地管理'),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createField,
         icon: const Icon(Icons.add),

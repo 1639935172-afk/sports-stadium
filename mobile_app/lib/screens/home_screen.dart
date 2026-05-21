@@ -88,62 +88,41 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: _isOrdinaryUser
+          ? _OrdinaryUserDrawer(
+              onOpenProfile: _openProfile,
+              onOpenReservations: _openMyReservations,
+              onOpenComments: _openMyComments,
+              onLogout: widget.auth.logout,
+            )
+          : _isStadiumAdmin
+          ? _StadiumAdminDrawer(
+              onOpenProfile: _openProfile,
+              onOpenMyStadiums: _openMyStadiums,
+              onOpenPendingReservations: _openAdminPendingReservations,
+              onLogout: widget.auth.logout,
+            )
+          : _isSystemAdmin
+          ? _SystemAdminDrawer(
+              onOpenProfile: _openProfile,
+              onOpenSystemUsers: _openSystemUsers,
+              onOpenStadiumAudit: _openAdminStadiumAudit,
+              onOpenCommentAudit: _openAdminCommentAudit,
+              onLogout: widget.auth.logout,
+            )
+          : null,
       appBar: AppBar(
+        centerTitle: true,
+        leading: (_isOrdinaryUser || _isStadiumAdmin || _isSystemAdmin)
+            ? Builder(
+                builder: (context) => IconButton(
+                  tooltip: '打开导航',
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu),
+                ),
+              )
+            : null,
         title: const Text('场馆列表'),
-        actions: [
-          if (_isStadiumAdmin)
-            IconButton(
-              tooltip: '我的场馆',
-              onPressed: _openMyStadiums,
-              icon: const Icon(Icons.storefront_outlined),
-            ),
-          if (_isStadiumAdmin)
-            IconButton(
-              tooltip: '预约审核',
-              onPressed: _openAdminPendingReservations,
-              icon: const Icon(Icons.fact_check_outlined),
-            ),
-          if (_isSystemAdmin)
-            IconButton(
-              tooltip: '场馆审核',
-              onPressed: _openAdminStadiumAudit,
-              icon: const Icon(Icons.approval_outlined),
-            ),
-          if (_isSystemAdmin)
-            IconButton(
-              tooltip: '评论审核',
-              onPressed: _openAdminCommentAudit,
-              icon: const Icon(Icons.rate_review_outlined),
-            ),
-          if (_isSystemAdmin)
-            IconButton(
-              tooltip: '用户管理',
-              onPressed: _openSystemUsers,
-              icon: const Icon(Icons.manage_accounts_outlined),
-            ),
-          if (_isOrdinaryUser)
-            IconButton(
-              tooltip: '我的预约',
-              onPressed: _openMyReservations,
-              icon: const Icon(Icons.event_note_outlined),
-            ),
-          if (_isOrdinaryUser)
-            IconButton(
-              tooltip: '我的评论',
-              onPressed: _openMyComments,
-              icon: const Icon(Icons.chat_bubble_outline),
-            ),
-          IconButton(
-            tooltip: '个人资料',
-            onPressed: _openProfile,
-            icon: const Icon(Icons.account_circle_outlined),
-          ),
-          IconButton(
-            tooltip: '退出登录',
-            onPressed: widget.auth.logout,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
       ),
       body: SafeArea(
         child: ListView(
@@ -289,6 +268,218 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute<void>(
         builder: (_) => MyStadiumsScreen(api: stadiumApi),
       ),
+    );
+  }
+}
+
+class _OrdinaryUserDrawer extends StatelessWidget {
+  const _OrdinaryUserDrawer({
+    required this.onOpenProfile,
+    required this.onOpenReservations,
+    required this.onOpenComments,
+    required this.onLogout,
+  });
+
+  final VoidCallback onOpenProfile;
+  final VoidCallback onOpenReservations;
+  final VoidCallback onOpenComments;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            _DrawerItem(
+              icon: Icons.account_circle_outlined,
+              label: '个人资料',
+              onTap: () => _open(context, onOpenProfile),
+            ),
+            _DrawerItem(
+              icon: Icons.event_note_outlined,
+              label: '我的预约',
+              onTap: () => _open(context, onOpenReservations),
+            ),
+            _DrawerItem(
+              icon: Icons.chat_bubble_outline,
+              label: '我的评论',
+              onTap: () => _open(context, onOpenComments),
+            ),
+            const Spacer(),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: '退出登录',
+              color: Colors.red,
+              onTap: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _open(BuildContext context, VoidCallback action) {
+    Navigator.of(context).pop();
+    action();
+  }
+}
+
+class _StadiumAdminDrawer extends StatelessWidget {
+  const _StadiumAdminDrawer({
+    required this.onOpenProfile,
+    required this.onOpenMyStadiums,
+    required this.onOpenPendingReservations,
+    required this.onLogout,
+  });
+
+  final VoidCallback onOpenProfile;
+  final VoidCallback onOpenMyStadiums;
+  final VoidCallback onOpenPendingReservations;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            _DrawerItem(
+              icon: Icons.account_circle_outlined,
+              label: '个人资料',
+              onTap: () => _open(context, onOpenProfile),
+            ),
+            _DrawerItem(
+              icon: Icons.storefront_outlined,
+              label: '我的场馆',
+              onTap: () => _open(context, onOpenMyStadiums),
+            ),
+            _DrawerItem(
+              icon: Icons.fact_check_outlined,
+              label: '预约审核',
+              onTap: () => _open(context, onOpenPendingReservations),
+            ),
+            const Spacer(),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: '退出登录',
+              color: Colors.red,
+              onTap: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _open(BuildContext context, VoidCallback action) {
+    Navigator.of(context).pop();
+    action();
+  }
+}
+
+class _SystemAdminDrawer extends StatelessWidget {
+  const _SystemAdminDrawer({
+    required this.onOpenProfile,
+    required this.onOpenSystemUsers,
+    required this.onOpenStadiumAudit,
+    required this.onOpenCommentAudit,
+    required this.onLogout,
+  });
+
+  final VoidCallback onOpenProfile;
+  final VoidCallback onOpenSystemUsers;
+  final VoidCallback onOpenStadiumAudit;
+  final VoidCallback onOpenCommentAudit;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            _DrawerItem(
+              icon: Icons.account_circle_outlined,
+              label: '个人资料',
+              onTap: () => _open(context, onOpenProfile),
+            ),
+            _DrawerItem(
+              icon: Icons.manage_accounts_outlined,
+              label: '用户管理',
+              onTap: () => _open(context, onOpenSystemUsers),
+            ),
+            _DrawerItem(
+              icon: Icons.approval_outlined,
+              label: '场馆审核',
+              onTap: () => _open(context, onOpenStadiumAudit),
+            ),
+            _DrawerItem(
+              icon: Icons.rate_review_outlined,
+              label: '评论审核',
+              onTap: () => _open(context, onOpenCommentAudit),
+            ),
+            const Spacer(),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: '退出登录',
+              color: Colors.red,
+              onTap: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _open(BuildContext context, VoidCallback action) {
+    Navigator.of(context).pop();
+    action();
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = color ?? const Color(0xFF111827);
+    return ListTile(
+      leading: Icon(icon, color: effectiveColor),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: effectiveColor,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
