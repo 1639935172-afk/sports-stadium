@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block extra_style %}
+  <style>
+    .profile-shell {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 32px;
+      align-items: start;
+    }
+    .profile-sidebar {
+      display: grid;
+      justify-items: center;
+      gap: 30px;
+      padding-top: 10px;
+    }
+    .profile-menu-icon {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: #3b2f2f;
+      position: relative;
+      box-shadow: 0 10px 24px rgba(59, 47, 47, 0.18);
+    }
+    .profile-menu-icon::before,
+    .profile-menu-icon::after {
+      content: "";
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      height: 7px;
+      border-radius: 999px;
+      background: #f7d27b;
+    }
+    .profile-menu-icon::before {
+      top: 25px;
+      box-shadow: 0 16px 0 #f7d27b;
+    }
+    .profile-menu-icon::after {
+      top: 57px;
+    }
+    .profile-system-name {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-size: 24px;
+      line-height: 1.5;
+      letter-spacing: 4px;
+      color: #111827;
+      font-weight: 800;
+      text-shadow:
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff;
+    }
+    .profile-nav {
+      display: grid;
+      gap: 20px;
+      justify-items: start;
+      width: 100%;
+      padding-left: 24px;
+    }
+    .profile-nav a {
+      font-size: 24px;
+      font-weight: 800;
+      color: #111827;
+      text-decoration: none;
+    }
+    .profile-nav a.is-active {
+      color: #5b6cff;
+    }
+    .profile-main {
+      display: grid;
+      gap: 18px;
+    }
+    .profile-heading {
+      display: flex;
+      align-items: baseline;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+    .profile-heading h1 {
+      margin: 0;
+      font-size: 50px;
+    }
+    .profile-heading h2 {
+      margin: 0;
+      font-size: 28px;
+      color: #111827;
+    }
+    {% block account_center_style %}{% endblock %}
+    @media (max-width: 980px) {
+      .profile-shell {
+        grid-template-columns: 1fr;
+      }
+      .profile-sidebar {
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        justify-items: start;
+      }
+      .profile-system-name {
+        writing-mode: initial;
+        text-orientation: mixed;
+      }
+      .profile-nav {
+        padding-left: 0;
+        grid-auto-flow: column;
+        gap: 24px;
+      }
+      {% block account_center_style_tablet %}{% endblock %}
+    }
+    @media (max-width: 640px) {
+      .profile-heading h1 {
+        font-size: 36px;
+      }
+      .profile-heading h2 {
+        font-size: 22px;
+      }
+      .profile-nav a {
+        font-size: 18px;
+      }
+      {% block account_center_style_mobile %}{% endblock %}
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <section class="profile-shell">
+    <aside class="profile-sidebar">
+      <div class="profile-menu-icon" aria-hidden="true"></div>
+      <div class="profile-system-name">体育场馆预约系统</div>
+      <nav class="profile-nav" aria-label="个人中心导航">
+        <a class="{% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}" href="{% url 'accounts:profile' %}">账号管理</a>
+        {% if request.user.is_ordinary_user %}
+          <a class="{% if request.resolver_match.url_name == 'mine' %}is-active{% endif %}" href="{% url 'reservations:mine' %}">我的预约</a>
+        {% elif request.user.is_stadium_admin %}
+          <a href="{% url 'stadiums:my_stadiums' %}">我的场馆</a>
+        {% elif request.user.is_system_admin %}
+          <a href="{% url 'accounts:system_user_list' %}">用户管理</a>
+        {% endif %}
+      </nav>
+    </aside>
+
+    <section class="profile-main">
+      <div class="profile-heading">
+        <h1>个人中心</h1>
+        <h2>{% block account_center_heading %}{% endblock %}</h2>
+      </div>
+      {% block account_center_content %}{% endblock %}
+    </section>
+  </section>
+{% endblock %}

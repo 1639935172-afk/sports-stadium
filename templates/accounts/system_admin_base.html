@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block body_class %}system-admin-page{% endblock %}
+{% block extra_style %}
+  <style>
+    body.system-admin-page main {
+      max-width: none;
+      margin: 0;
+      padding: 28px 24px 64px 12px;
+    }
+    .system-admin-shell {
+      display: grid;
+      grid-template-columns: 88px 220px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      min-height: 640px;
+      width: 100%;
+    }
+    .system-admin-brand {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-size: 26px;
+      line-height: 1.45;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: 6px;
+      justify-self: start;
+      text-shadow:
+        -1px -1px 0 #ffffff,
+        1px -1px 0 #ffffff,
+        -1px 1px 0 #ffffff,
+        1px 1px 0 #ffffff;
+    }
+    .system-admin-sidebar {
+      display: grid;
+      justify-items: start;
+      gap: 26px;
+      padding-top: 4px;
+    }
+    .system-admin-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #3b2f2f;
+      position: relative;
+      box-shadow: 0 12px 28px rgba(59, 47, 47, 0.14);
+    }
+    .system-admin-icon span {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      height: 10px;
+      border-radius: 999px;
+      background: #ffffff;
+    }
+    .system-admin-icon span:nth-child(1) { top: 34px; }
+    .system-admin-icon span:nth-child(2) { top: 55px; background: #f2c35f; }
+    .system-admin-icon span:nth-child(3) { top: 76px; }
+    .system-admin-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      text-align: left;
+      line-height: 1.5;
+    }
+    .system-admin-title-link {
+      color: inherit;
+      text-decoration: none;
+    }
+    .system-admin-title-link:hover {
+      text-decoration: none;
+      color: #5673ff;
+    }
+    .system-admin-nav {
+      display: grid;
+      gap: 28px;
+      width: 100%;
+    }
+    .system-admin-nav a {
+      color: #111827;
+      text-decoration: none;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .system-admin-nav a.is-active {
+      color: #5673ff;
+    }
+    .system-admin-content {
+      min-width: 0;
+    }
+    .system-admin-page-title {
+      margin: 0 0 28px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+    }
+    {% block system_admin_style %}{% endblock %}
+    @media (max-width: 980px) {
+      body.system-admin-page main {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .system-admin-shell {
+        grid-template-columns: 1fr;
+        gap: 28px;
+        min-height: unset;
+      }
+      .system-admin-brand {
+        writing-mode: initial;
+        text-orientation: mixed;
+        justify-self: start;
+        letter-spacing: 2px;
+      }
+      .system-admin-sidebar {
+        justify-items: start;
+      }
+      .system-admin-nav {
+        grid-auto-flow: column;
+        gap: 20px;
+        overflow-x: auto;
+      }
+      .system-admin-nav a {
+        white-space: nowrap;
+      }
+      {% block system_admin_style_tablet %}{% endblock %}
+    }
+    @media (max-width: 640px) {
+      .system-admin-icon {
+        width: 92px;
+        height: 92px;
+      }
+      .system-admin-icon span {
+        left: 20px;
+        right: 20px;
+        height: 8px;
+      }
+      .system-admin-icon span:nth-child(1) { top: 26px; }
+      .system-admin-icon span:nth-child(2) { top: 42px; }
+      .system-admin-icon span:nth-child(3) { top: 58px; }
+      .system-admin-title,
+      .system-admin-nav a,
+      .system-admin-page-title {
+        font-size: 18px;
+      }
+      {% block system_admin_style_mobile %}{% endblock %}
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <section class="system-admin-shell">
+    <div class="system-admin-brand">体育场馆预约系统</div>
+    <aside class="system-admin-sidebar">
+      <div class="system-admin-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <h1 class="system-admin-title">
+        <a class="system-admin-title-link" href="{% url 'accounts:profile' %}">管理员信息</a>
+      </h1>
+      <nav class="system-admin-nav" aria-label="系统管理员导航">
+        <a class="{% if request.resolver_match.url_name == 'system_user_list' or request.resolver_match.url_name == 'system_user_edit' %}is-active{% endif %}" href="{% url 'accounts:system_user_list' %}">管理用户</a>
+        <a class="{% if request.resolver_match.namespace == 'stadiums' and request.resolver_match.url_name == 'audit_list' %}is-active{% endif %}" href="{% url 'stadiums:audit_list' %}">场馆审核</a>
+        <a class="{% if request.resolver_match.namespace == 'comments' and request.resolver_match.url_name == 'audit_list' %}is-active{% endif %}" href="{% url 'comments:audit_list' %}">评论审核</a>
+      </nav>
+    </aside>
+    <section class="system-admin-content">
+      <h2 class="system-admin-page-title">{% block system_admin_heading %}{% endblock %}</h2>
+      {% block system_admin_content %}{% endblock %}
+    </section>
+  </section>
+{% endblock %}
