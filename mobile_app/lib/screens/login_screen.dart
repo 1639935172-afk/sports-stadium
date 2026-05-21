@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/auth_state.dart';
 import '../widgets/app_feedback.dart';
+import '../widgets/auth_page_chrome.dart';
 import 'password_reset_screen.dart';
 import 'register_screen.dart';
 
@@ -40,55 +41,63 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     final ok = await widget.auth.login(
-      _phoneController.text,
+      _phoneController.text.trim(),
       _passwordController.text,
       rememberPassword: _rememberPassword,
     );
     if (!mounted) return;
     setState(() => _submitting = false);
     if (!ok) {
-      _showMessage(widget.auth.errorMessage ?? '登录失败');
+      AppFeedback.showMessage(
+        context,
+        widget.auth.errorMessage ?? '登录失败',
+        isError: true,
+      );
     }
-  }
-
-  void _showMessage(String message) {
-    AppFeedback.showMessage(context, message, isError: true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 360),
               child: Form(
                 key: _formKey,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      '体育场馆预约系统',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                      textAlign: TextAlign.center,
+                    const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 36, height: 36),
+                        SizedBox(width: 12),
+                        Expanded(child: SportLogo()),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const AuthTitle(),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '密码登录',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '普通用户移动端登录',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    TextFormField(
+                    AuthTextField(
                       controller: _phoneController,
+                      hintText: '手机号',
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: '手机号',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
                       textInputAction: TextInputAction.next,
                       validator: (value) {
                         final text = value?.trim() ?? '';
@@ -98,14 +107,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
+                    const SizedBox(height: 14),
+                    AuthTextField(
                       controller: _passwordController,
+                      hintText: '请输入密码',
                       obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: '密码',
-                        prefixIcon: Icon(Icons.lock_outline),
-                      ),
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submitting ? null : _submit(),
                       validator: (value) =>
@@ -114,6 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
+                      dense: true,
                       value: _rememberPassword,
                       onChanged: _submitting
                           ? null
@@ -122,15 +129,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _rememberPassword = value ?? false;
                               });
                             },
-                      title: const Text('记住密码'),
+                      title: const Text(
+                        '记住密码',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       controlAffinity: ListTileControlAffinity.leading,
                     ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const AppLoadingIcon(size: 20)
-                          : const Text('登录'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 50,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        onPressed: _submitting ? null : _submit,
+                        child: _submitting
+                            ? const AppLoadingIcon(size: 22)
+                            : const Text('立即登录'),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton(

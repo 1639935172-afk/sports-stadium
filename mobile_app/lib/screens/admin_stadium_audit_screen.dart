@@ -106,7 +106,7 @@ class _AdminStadiumAuditScreenState extends State<AdminStadiumAuditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('场馆审核')),
+      appBar: AppBar(centerTitle: true, title: const Text('场馆审核')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadStadiums,

@@ -98,7 +98,10 @@ class _TimeSlotFormScreenState extends State<TimeSlotFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? '编辑时段' : '新增时段')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(_isEditing ? '编辑时段' : '新增时段'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -110,75 +113,75 @@ class _TimeSlotFormScreenState extends State<TimeSlotFormScreen> {
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   children: [
-                TextFormField(
-                  controller: _dateController,
-                  readOnly: true,
-                  onTap: _pickDate,
-                  decoration: const InputDecoration(
-                    labelText: '开放日期',
-                    hintText: 'YYYY-MM-DD',
-                    suffixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                  validator: (value) {
-                    final text = (value ?? '').trim();
-                    if (text.isEmpty) return '请输入日期';
-                    final parsed = DateTime.tryParse(text);
-                    if (parsed == null) return '请输入合法日期';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _startTimeController,
-                  readOnly: true,
-                  onTap: () => _pickTime(_startTimeController),
-                  decoration: const InputDecoration(
-                    labelText: '开始时间',
-                    hintText: 'HH:MM',
-                    suffixIcon: Icon(Icons.schedule_outlined),
-                  ),
-                  validator: (value) => _validateTime(value),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _endTimeController,
-                  readOnly: true,
-                  onTap: () => _pickTime(_endTimeController),
-                  decoration: const InputDecoration(
-                    labelText: '结束时间',
-                    hintText: 'HH:MM',
-                    suffixIcon: Icon(Icons.schedule_outlined),
-                  ),
-                  validator: (value) {
-                    final error = _validateTime(value);
-                    if (error != null) return error;
-                    final start = _normalizeTime(
-                      _startTimeController.text.trim(),
-                    );
-                    final end = _normalizeTime((value ?? '').trim());
-                    if (start.compareTo(end) >= 0) return '结束时间必须晚于开始时间';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('可预约'),
-                  value: _isAvailable,
-                  onChanged: (value) {
-                    setState(() {
-                      _isAvailable = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _submit,
-                    child: Text(_isEditing ? '保存时段' : '创建时段'),
-                  ),
-                ),
+                    TextFormField(
+                      controller: _dateController,
+                      readOnly: true,
+                      onTap: _pickDate,
+                      decoration: const InputDecoration(
+                        labelText: '开放日期',
+                        hintText: 'YYYY-MM-DD',
+                        suffixIcon: Icon(Icons.calendar_today_outlined),
+                      ),
+                      validator: (value) {
+                        final text = (value ?? '').trim();
+                        if (text.isEmpty) return '请输入日期';
+                        final parsed = DateTime.tryParse(text);
+                        if (parsed == null) return '请输入合法日期';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _startTimeController,
+                      readOnly: true,
+                      onTap: () => _pickTime(_startTimeController),
+                      decoration: const InputDecoration(
+                        labelText: '开始时间',
+                        hintText: 'HH:MM',
+                        suffixIcon: Icon(Icons.schedule_outlined),
+                      ),
+                      validator: (value) => _validateTime(value),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _endTimeController,
+                      readOnly: true,
+                      onTap: () => _pickTime(_endTimeController),
+                      decoration: const InputDecoration(
+                        labelText: '结束时间',
+                        hintText: 'HH:MM',
+                        suffixIcon: Icon(Icons.schedule_outlined),
+                      ),
+                      validator: (value) {
+                        final error = _validateTime(value);
+                        if (error != null) return error;
+                        final start = _normalizeTime(
+                          _startTimeController.text.trim(),
+                        );
+                        final end = _normalizeTime((value ?? '').trim());
+                        if (start.compareTo(end) >= 0) return '结束时间必须晚于开始时间';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('可预约'),
+                      value: _isAvailable,
+                      onChanged: (value) {
+                        setState(() {
+                          _isAvailable = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _submit,
+                        child: Text(_isEditing ? '保存时段' : '创建时段'),
+                      ),
+                    ),
                   ],
                 ),
               ),

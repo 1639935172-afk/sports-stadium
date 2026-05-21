@@ -165,7 +165,7 @@ class _MyStadiumsScreenState extends State<MyStadiumsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的场馆')),
+      appBar: AppBar(centerTitle: true, title: const Text('我的场馆')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createStadium,
         icon: const Icon(Icons.add_business_outlined),
