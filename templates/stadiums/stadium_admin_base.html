@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block body_class %}stadium-admin-page{% endblock %}
+{% block extra_style %}
+  <style>
+    body.stadium-admin-page main {
+      max-width: none;
+      margin: 0;
+      padding: 28px 24px 64px 12px;
+    }
+    .stadium-admin-shell {
+      display: grid;
+      grid-template-columns: 88px 210px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      width: 100%;
+      min-height: 640px;
+    }
+    .stadium-admin-brand {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-size: 26px;
+      line-height: 1.45;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: 6px;
+      justify-self: start;
+      text-shadow:
+        -1px -1px 0 #ffffff,
+        1px -1px 0 #ffffff,
+        -1px 1px 0 #ffffff,
+        1px 1px 0 #ffffff;
+    }
+    .stadium-admin-sidebar {
+      display: grid;
+      justify-items: start;
+      gap: 26px;
+      padding-top: 4px;
+    }
+    .stadium-admin-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #3b2f2f;
+      position: relative;
+      box-shadow: 0 12px 28px rgba(59, 47, 47, 0.14);
+    }
+    .stadium-admin-icon span {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      height: 10px;
+      border-radius: 999px;
+      background: #ffffff;
+    }
+    .stadium-admin-icon span:nth-child(1) { top: 34px; }
+    .stadium-admin-icon span:nth-child(2) { top: 55px; background: #f2c35f; }
+    .stadium-admin-icon span:nth-child(3) { top: 76px; }
+    .stadium-admin-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .stadium-admin-title a {
+      color: #111827;
+      text-decoration: none;
+    }
+    .stadium-admin-title a.is-active {
+      color: #5673ff;
+    }
+    .stadium-admin-title a:hover {
+      color: #5673ff;
+      text-decoration: none;
+    }
+    .stadium-admin-nav {
+      display: grid;
+      gap: 32px;
+      width: 100%;
+    }
+    .stadium-admin-nav a {
+      color: #111827;
+      text-decoration: none;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .stadium-admin-nav a.is-active {
+      color: #5673ff;
+    }
+    .stadium-admin-content {
+      min-width: 0;
+    }
+    .stadium-admin-page-title {
+      margin: 0 0 28px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+    }
+    {% block stadium_admin_style %}{% endblock %}
+    @media (max-width: 980px) {
+      body.stadium-admin-page main {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .stadium-admin-shell {
+        grid-template-columns: 1fr;
+        gap: 28px;
+        min-height: unset;
+      }
+      .stadium-admin-brand {
+        writing-mode: initial;
+        text-orientation: mixed;
+        letter-spacing: 2px;
+      }
+      .stadium-admin-nav {
+        grid-auto-flow: column;
+        gap: 20px;
+        overflow-x: auto;
+      }
+      .stadium-admin-nav a {
+        white-space: nowrap;
+      }
+      {% block stadium_admin_style_tablet %}{% endblock %}
+    }
+    @media (max-width: 640px) {
+      .stadium-admin-icon {
+        width: 92px;
+        height: 92px;
+      }
+      .stadium-admin-icon span {
+        left: 20px;
+        right: 20px;
+        height: 8px;
+      }
+      .stadium-admin-icon span:nth-child(1) { top: 26px; }
+      .stadium-admin-icon span:nth-child(2) { top: 42px; }
+      .stadium-admin-icon span:nth-child(3) { top: 58px; }
+      .stadium-admin-title,
+      .stadium-admin-nav a,
+      .stadium-admin-page-title {
+        font-size: 18px;
+      }
+      {% block stadium_admin_style_mobile %}{% endblock %}
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <section class="stadium-admin-shell">
+    <div class="stadium-admin-brand">体育场馆预约系统</div>
+    <aside class="stadium-admin-sidebar">
+      <div class="stadium-admin-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <h1 class="stadium-admin-title">
+        <a
+          class="{% if request.resolver_match.namespace == 'accounts' and request.resolver_match.url_name in 'profile profile_edit password_change account_cancel' %}is-active{% endif %}"
+          href="{% url 'accounts:profile' %}"
+        >
+          场馆管理员信息
+        </a>
+      </h1>
+      <nav class="stadium-admin-nav" aria-label="场馆管理员导航">
+        <a class="{% if request.resolver_match.namespace == 'stadiums' and request.resolver_match.url_name == 'my_stadiums' %}is-active{% endif %}" href="{% url 'stadiums:my_stadiums' %}">场馆管理</a>
+        <a class="{% if request.resolver_match.namespace == 'reservations' and request.resolver_match.url_name == 'admin_pending' %}is-active{% endif %}" href="{% url 'reservations:admin_pending' %}">预约审核</a>
+      </nav>
+    </aside>
+    <section class="stadium-admin-content">
+      <h2 class="stadium-admin-page-title">{% block stadium_admin_heading %}{% endblock %}</h2>
+      {% block stadium_admin_content %}{% endblock %}
+    </section>
+  </section>
+{% endblock %}

@@ -1,7 +1,7 @@
-{% extends "accounts/account_center_base.html" %}
+{% extends "stadiums/stadium_admin_base.html" %}
 {% block title %}个人资料 - 体育场馆预约系统{% endblock %}
-{% block account_center_heading %}我的个人资料{% endblock %}
-{% block account_center_style %}
+{% block stadium_admin_heading %}场馆管理员信息{% endblock %}
+{% block stadium_admin_style %}
   .profile-card {
     border: 2px solid #111827;
     border-radius: 16px;
@@ -9,6 +9,7 @@
     padding: 28px 28px 70px;
     position: relative;
     min-height: 380px;
+    max-width: 980px;
   }
   .profile-card-title {
     margin: 0 0 22px;
@@ -103,6 +104,7 @@
     display: flex;
     gap: 22px;
     flex-wrap: wrap;
+    margin-top: 22px;
   }
   .profile-actions .button {
     min-width: 216px;
@@ -117,12 +119,12 @@
     background: #3fa9f5;
   }
 {% endblock %}
-{% block account_center_style_tablet %}
+{% block stadium_admin_style_tablet %}
   .profile-card-grid {
     grid-template-columns: 1fr;
   }
 {% endblock %}
-{% block account_center_style_mobile %}
+{% block stadium_admin_style_mobile %}
   .profile-info-row {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -138,7 +140,7 @@
     padding: 22px 18px 60px;
   }
 {% endblock %}
-{% block account_center_content %}
+{% block stadium_admin_content %}
   <div class="profile-card">
     <h3 class="profile-card-title">个人信息</h3>
     <div class="profile-card-grid">
@@ -160,7 +162,6 @@
           <div class="profile-info-value">{% if request.user.can_login %}正常{% else %}不可登录{% endif %}</div>
         </div>
       </div>
-
       <div class="profile-user-tile">
         <div>
           <div class="profile-user-name">{{ request.user.nickname|default:request.user.phone_number }}</div>
@@ -171,9 +172,8 @@
     </div>
     <a class="profile-edit-link" href="{% url 'accounts:profile_edit' %}">修改个人信息</a>
   </div>
-
   <div class="profile-actions">
-    <a class="button" href="{% url 'accounts:logout' %}">退出登录</a>
+    <a class="button" href="{% url 'accounts:password_change' %}">修改密码</a>
     <a class="button button-danger" href="{% url 'accounts:account_cancel' %}">注销账号</a>
   </div>
 {% endblock %}

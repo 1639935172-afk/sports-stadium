@@ -1,12 +1,322 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}体育场馆预约系统{% endblock %}
+{% block extra_style %}
+  <style>
+    .home-shell {
+      display: grid;
+      gap: 28px;
+    }
+    .home-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .home-brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 22px;
+      border: 4px solid #8b5cf6;
+      background: #fff;
+      color: #111827;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0;
+      box-shadow: 0 6px 18px rgba(139, 92, 246, 0.08);
+    }
+    .home-tabs {
+      display: flex;
+      align-items: center;
+      gap: 52px;
+      flex-wrap: wrap;
+      font-weight: 900;
+      font-size: 30px;
+      color: #111827;
+    }
+    .home-tabs a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .home-tabs a.is-active {
+      color: #5b6cff;
+    }
+    .home-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      border-radius: 18px;
+      background: #f3f4f6;
+      min-width: 180px;
+      justify-content: flex-end;
+    }
+    .home-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #d1d5db, #9ca3af);
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .home-avatar::before {
+      content: "";
+      position: absolute;
+      top: 11px;
+      left: 17px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.85);
+    }
+    .home-avatar::after {
+      content: "";
+      position: absolute;
+      left: 9px;
+      bottom: 9px;
+      width: 36px;
+      height: 18px;
+      border-radius: 999px 999px 10px 10px;
+      background: rgba(255, 255, 255, 0.85);
+    }
+    .home-user-text {
+      text-align: right;
+      line-height: 1.3;
+    }
+    .home-user-name {
+      font-size: 20px;
+      font-weight: 900;
+      color: #111827;
+    }
+    .home-user-role {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4b5563;
+    }
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 34px;
+      align-items: start;
+    }
+    .featured-card {
+      display: grid;
+      gap: 18px;
+    }
+    .featured-cover {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 16 / 10;
+      border: 1px solid #d1d5db;
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.02)),
+        linear-gradient(180deg, #e5eefb, #d8e4f5 42%, #c5d8ef 100%);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09);
+    }
+    .featured-cover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.55) 0, rgba(255,255,255,0.08) 2px, transparent 2px),
+        linear-gradient(rgba(255,255,255,0.28) 0, rgba(255,255,255,0.08) 2px, transparent 2px);
+      background-size: 52px 100%, 100% 42px;
+      opacity: 0.3;
+    }
+    .featured-cover-sport {
+      position: absolute;
+      inset: auto 16px 16px 16px;
+      color: rgba(255, 255, 255, 0.96);
+      font-size: 28px;
+      font-weight: 900;
+      text-shadow: 0 2px 10px rgba(15, 23, 42, 0.4);
+    }
+    .featured-card:nth-child(2) .featured-cover {
+      background:
+        linear-gradient(135deg, rgba(127, 29, 29, 0.2), rgba(17, 24, 39, 0.06)),
+        linear-gradient(180deg, #f7d7c5, #efb389 55%, #d77b59 100%);
+    }
+    .featured-card:nth-child(3) .featured-cover {
+      background:
+        linear-gradient(135deg, rgba(3, 105, 161, 0.2), rgba(15, 23, 42, 0.06)),
+        linear-gradient(180deg, #a9d7d6, #4fb3ab 55%, #2b7f7b 100%);
+    }
+    .featured-name {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 20px;
+      border: 2px solid #111827;
+      border-radius: 14px;
+      background: #fff;
+      color: #7c5cff;
+      font-size: 22px;
+      font-weight: 900;
+      text-align: center;
+      text-decoration: none;
+    }
+    .featured-meta {
+      display: grid;
+      gap: 18px;
+      padding: 4px 0 0;
+    }
+    .featured-location {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 18px;
+      color: #111827;
+      font-weight: 700;
+    }
+    .featured-pin {
+      width: 44px;
+      height: 44px;
+      border: 3px solid #111827;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .featured-pin::before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      left: 9px;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #111827;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .featured-summary {
+      font-size: 18px;
+      line-height: 1.7;
+      color: #111827;
+      font-weight: 700;
+    }
+    .featured-summary span {
+      color: #4b5563;
+      font-weight: 600;
+    }
+    .home-footer-action {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .home-outline-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 170px;
+      min-height: 52px;
+      padding: 0 18px;
+      border: 2px solid #111827;
+      border-radius: 14px;
+      background: #fff;
+      color: #38bdf8;
+      font-size: 20px;
+      font-weight: 900;
+      text-decoration: none;
+    }
+    @media (max-width: 1100px) {
+      .featured-grid {
+        grid-template-columns: 1fr;
+      }
+      .home-tabs {
+        gap: 24px;
+        font-size: 24px;
+      }
+      .home-topbar {
+        align-items: flex-start;
+      }
+    }
+    @media (max-width: 640px) {
+      .home-brand {
+        width: 100%;
+        font-size: 20px;
+      }
+      .home-tabs {
+        font-size: 20px;
+        gap: 16px;
+      }
+      .home-user {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .featured-name {
+        font-size: 18px;
+      }
+      .featured-location,
+      .featured-summary {
+        font-size: 16px;
+      }
+    }
+  </style>
+{% endblock %}
 {% block content %}
-  <h1>体育场馆预约系统</h1>
-  <p>本系统覆盖场馆提交与审核、场地和时段维护、用户预约、场馆管理员审核预约、用户评论与系统管理员审核。</p>
-  <section class="grid" aria-label="主流程入口">
-    <article class="item"><strong>普通用户</strong><span>浏览已开放场馆，选择可预约时段，提交预约申请，查看或取消自己的预约，发表评论。</span><div class="actions"><a class="button" href="{% url 'stadiums:list' %}">浏览场馆</a>{% if request.user.is_authenticated and request.user.is_ordinary_user %}<a href="{% url 'reservations:mine' %}">我的预约</a>{% endif %}</div></article>
-    <article class="item"><strong>场馆管理员</strong><span>提交场馆信息，维护场地和可约时段，审核自己场馆下的预约申请。</span><div class="actions">{% if request.user.is_authenticated and request.user.is_stadium_admin %}<a class="button" href="{% url 'stadiums:my_stadiums' %}">我的场馆</a><a href="{% url 'reservations:admin_pending' %}">预约审核</a>{% else %}<a href="{% url 'accounts:login' %}">登录后管理</a>{% endif %}</div></article>
-    <article class="item"><strong>系统管理员</strong><span>审核场馆信息，管理用户账号，审核评论，处理平台管理节点。</span><div class="actions">{% if request.user.is_authenticated and request.user.is_system_admin %}<a class="button" href="{% url 'stadiums:audit_list' %}">场馆审核</a><a href="{% url 'comments:audit_list' %}">评论审核</a><a href="{% url 'accounts:system_user_list' %}">用户管理</a>{% else %}<a href="{% url 'accounts:login' %}">登录后审核</a>{% endif %}</div></article>
+  <section class="home-shell">
+    <div class="home-topbar">
+      <div class="home-brand">体育场馆预约系统</div>
+      <nav class="home-tabs" aria-label="首页快捷导航">
+        <a class="is-active" href="{% url 'home' %}">首页</a>
+        <a href="{% url 'stadiums:list' %}">场馆信息</a>
+        {% if request.user.is_authenticated %}
+          <a href="{% url 'accounts:profile' %}">个人中心</a>
+        {% else %}
+          <a href="{% url 'accounts:login' %}">个人中心</a>
+        {% endif %}
+      </nav>
+      <div class="home-user">
+        <div class="home-user-text">
+          <div class="home-user-name">
+            {% if request.user.is_authenticated %}
+              {{ request.user.nickname|default:request.user.phone_number }}
+            {% else %}
+              游客
+            {% endif %}
+          </div>
+          <div class="home-user-role">
+            {% if request.user.is_authenticated %}
+              {% if request.user.is_ordinary_user %}普通用户{% elif request.user.is_stadium_admin %}场馆管理员{% elif request.user.is_system_admin %}系统管理员{% endif %}
+            {% else %}
+              未登录
+            {% endif %}
+          </div>
+        </div>
+        <div class="home-avatar" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    {% if featured_stadiums %}
+      <section class="featured-grid" aria-label="推荐场馆">
+        {% for stadium in featured_stadiums %}
+          <article class="featured-card">
+            <div class="featured-cover">
+              <div class="featured-cover-sport">
+                {% cycle "篮球馆" "乒乓球馆" "羽毛球馆" %}
+              </div>
+            </div>
+            <a class="featured-name" href="{% url 'stadiums:detail' stadium.pk %}">{{ stadium.name }}</a>
+            <div class="featured-meta">
+              <div class="featured-location">
+                <div class="featured-pin" aria-hidden="true"></div>
+                <div>{{ stadium.address }}</div>
+              </div>
+              <div class="featured-summary">
+                简介：<span>{{ stadium.information|default:"暂无简介"|truncatechars:40 }}</span>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% else %}
+      <div class="empty">当前还没有可展示的公开场馆。可先运行 <code>python manage.py seed_demo</code> 生成演示数据。</div>
+    {% endif %}
+
+    <div class="home-footer-action">
+      <a class="home-outline-button" href="{% url 'stadiums:list' %}">查看全部</a>
+    </div>
   </section>
-  <section class="item"><h2>演示账号</h2><p>运行 <code>python manage.py seed_demo</code> 后可使用以下账号演示：</p><p>系统管理员：18800000001 / DemoPass123</p><p>场馆管理员：18800000002 / DemoPass123</p><p>普通用户：18800000003 / DemoPass123</p></section>
 {% endblock %}

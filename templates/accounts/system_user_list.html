@@ -1,24 +1,156 @@
-﻿{% extends "base.html" %}
+{% extends "accounts/system_admin_base.html" %}
 {% block title %}用户管理 - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>用户管理</h1>
-  <form method="get" class="panel">
-    <div class="field"><label for="q">搜索用户</label><input id="q" name="q" value="{{ query }}" placeholder="手机号或昵称"></div>
-    <button class="button" type="submit">搜索</button>
-    {% if query %}<a href="{% url 'accounts:system_user_list' %}">清空搜索</a>{% endif %}
+{% block system_admin_heading %}管理用户{% endblock %}
+{% block system_admin_style %}
+  .user-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .user-toolbar label {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+    color: #111827;
+  }
+  .user-toolbar input {
+    width: 270px;
+    border: 0;
+    border-radius: 14px;
+    background: #76ecf4;
+    padding: 8px 16px;
+    font-size: 18px;
+    color: #111827;
+  }
+  .user-toolbar .button {
+    min-height: 42px;
+  }
+  .user-toolbar .clear-link {
+    color: #4b5563;
+    font-size: 15px;
+  }
+  .user-table-wrap {
+    overflow-x: auto;
+  }
+  .user-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .user-table th,
+  .user-table td {
+    border: 3px solid #222222;
+    padding: 20px 18px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+  }
+  .user-table th {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .user-table td.actions-cell {
+    width: 130px;
+  }
+  .user-meta {
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+  }
+  .user-meta small {
+    color: #6b7280;
+    font-size: 13px;
+  }
+  .manage-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 2px solid #5673ff;
+    border-radius: 8px;
+    color: #5673ff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .manage-link:hover {
+    background: #eef2ff;
+    text-decoration: none;
+  }
+{% endblock %}
+{% block system_admin_style_mobile %}
+  .user-toolbar label {
+    font-size: 18px;
+  }
+  .user-toolbar input {
+    width: min(100%, 270px);
+    font-size: 16px;
+  }
+  .user-table th,
+  .user-table td {
+    padding: 14px 12px;
+    font-size: 16px;
+  }
+{% endblock %}
+{% block system_admin_content %}
+  <form method="get" class="user-toolbar">
+    <label for="q">搜索：</label>
+    <input id="q" name="q" value="{{ query }}" placeholder="请输入用户名">
+    <button class="button" type="submit">查询</button>
+    {% if query %}<a class="clear-link" href="{% url 'accounts:system_user_list' %}">清空</a>{% endif %}
   </form>
   {% if users %}
-    <section class="grid" aria-label="用户列表">
-      {% for user in users %}
-        <article class="item">
-          <strong>{{ user.nickname|default:user.phone_number }}</strong>
-          <span>手机号：{{ user.phone_number }}</span><br>
-          <span>角色：{{ user.get_role_display }}</span><br>
-          <span>登录状态：{% if user.can_login %}可登录{% else %}不可登录{% endif %}</span><br>
-          <span>注销状态：{% if user.is_cancelled %}已注销{% else %}正常{% endif %}</span>
-          {% if user != request.user %}<div class="actions"><a class="button" href="{% url 'accounts:system_user_edit' user.pk %}">管理</a></div>{% endif %}
-        </article>
-      {% endfor %}
-    </section>
-  {% else %}<p class="empty">没有找到用户。</p>{% endif %}
+    <div class="user-table-wrap">
+      <table class="user-table" aria-label="用户列表">
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th>手机号</th>
+            <th>性别</th>
+            <th>角色</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>
+                <div class="user-meta">
+                  <span>{{ user.nickname|default:"未填写" }}</span>
+                  {% if user == request.user %}<small>当前登录账号</small>{% endif %}
+                </div>
+              </td>
+              <td>{{ user.phone_number }}</td>
+              <td>未填写</td>
+              <td>{{ user.get_role_display }}</td>
+              <td>
+                {% if user.is_cancelled %}
+                  已注销
+                {% elif user.can_login %}
+                  正常
+                {% else %}
+                  已禁用
+                {% endif %}
+              </td>
+              <td class="actions-cell">
+                {% if user != request.user %}
+                  <a class="manage-link" href="{% url 'accounts:system_user_edit' user.pk %}">管理</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">没有找到用户。</p>
+  {% endif %}
 {% endblock %}
