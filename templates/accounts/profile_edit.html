@@ -1,15 +1,77 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}修改资料 - 体育场馆预约系统{% endblock %}
+{% block extra_style %}
+  <style>
+    .account-panel {
+      max-width: 860px;
+      margin: 0 auto;
+      display: grid;
+      gap: 22px;
+    }
+    .account-panel h1 {
+      font-size: 42px;
+      margin-bottom: 0;
+    }
+    .account-card {
+      border: 2px solid #111827;
+      border-radius: 16px;
+      background: #fff;
+      padding: 26px;
+    }
+    .account-card .field {
+      margin-bottom: 18px;
+    }
+    .account-card label {
+      margin-bottom: 8px;
+      font-size: 18px;
+      color: #111827;
+    }
+    .account-card input {
+      min-height: 54px;
+      border: 3px solid #111827;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .account-card input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+    }
+    .account-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .account-actions .button {
+      min-width: 140px;
+      min-height: 48px;
+      border-radius: 12px;
+      font-weight: 800;
+    }
+  </style>
+{% endblock %}
 {% block content %}
-  <h1>修改资料</h1>
-  <div class="panel">
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}<ul class="errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-      {% for field in form %}
-        <div class="field">{{ field.label_tag }}{{ field }}{% if field.errors %}<ul class="errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
-      {% endfor %}
-      <button class="button" type="submit">保存</button>
-    </form>
-  </div>
+  <section class="account-panel">
+    <h1>修改资料</h1>
+    <div class="account-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<ul class="errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+        {% for field in form %}
+          <div class="field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}<ul class="errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="account-actions">
+          <button class="button" type="submit">保存</button>
+          <a class="button button-secondary" href="{% url 'accounts:profile' %}">返回个人中心</a>
+        </div>
+      </form>
+    </div>
+  </section>
 {% endblock %}

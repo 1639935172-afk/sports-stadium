@@ -1,12 +1,146 @@
-﻿{% extends "base.html" %}
+{% extends "accounts/account_center_base.html" %}
 {% block title %}我的预约 - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>我的预约</h1>
-  {% if reservations %}
-    <section class="grid" aria-label="我的预约列表">
-      {% for reservation in reservations %}
-        <article class="item"><strong>{{ reservation.time_slot.field.stadium.name }}</strong><span>场地：{{ reservation.time_slot.field.number }} / {{ reservation.time_slot.field.field_type }}</span><br><span>日期：{{ reservation.time_slot.date|date:"Y-m-d" }}</span><br><span>时间：{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</span><br><span>状态：{{ reservation.get_status_display }}</span>{% if reservation.status == "pending" or reservation.status == "approved" %}<form method="post" action="{% url 'reservations:cancel' reservation.pk %}" class="actions">{% csrf_token %}<button class="button button-danger" type="submit">取消预约</button></form>{% endif %}</article>
-      {% endfor %}
-    </section>
-  {% else %}<p class="empty">你还没有预约。</p>{% endif %}
+{% block account_center_heading %}已预约的场地{% endblock %}
+{% block account_center_style %}
+  .reservation-panel {
+    display: grid;
+    gap: 18px;
+    max-width: 760px;
+  }
+  .reservation-caption {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin-left: 6px;
+  }
+  .reservation-search {
+    position: relative;
+    width: 240px;
+  }
+  .reservation-search input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 56px;
+    border: 3px solid #111827;
+    border-radius: 14px;
+    padding: 10px 56px 10px 16px;
+    font-size: 16px;
+    background: #fff;
+  }
+  .reservation-search::after {
+    content: "⌕";
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 42px;
+    line-height: 1;
+    color: #9bd0ff;
+    pointer-events: none;
+  }
+  .reservation-table-wrap {
+    border: 2px solid #111827;
+    background: #fff;
+    overflow-x: auto;
+  }
+  .reservation-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .reservation-table th,
+  .reservation-table td {
+    border: 2px solid #111827;
+    padding: 18px 14px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 600;
+    word-break: break-word;
+  }
+  .reservation-table th {
+    font-size: 18px;
+    font-weight: 800;
+    background: #fff;
+  }
+  .reservation-table td form {
+    margin-top: 10px;
+  }
+  .reservation-table .button {
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .reservation-empty-row td {
+    height: 78px;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+{% endblock %}
+{% block account_center_style_mobile %}
+  .reservation-search {
+    width: 100%;
+  }
+  .reservation-table th,
+  .reservation-table td {
+    font-size: 14px;
+    padding: 12px 10px;
+  }
+{% endblock %}
+{% block account_center_content %}
+  <div class="reservation-panel">
+    <div class="reservation-caption">已预约的场地</div>
+    <div class="reservation-search">
+      <input type="search" placeholder="">
+    </div>
+
+    <div class="reservation-table-wrap">
+      <table class="reservation-table" aria-label="我的预约列表">
+        <thead>
+          <tr>
+            <th>场馆名称</th>
+            <th>场地名称</th>
+            <th>预约时间</th>
+            <th>审核状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if reservations %}
+            {% for reservation in reservations %}
+              <tr>
+                <td>{{ reservation.time_slot.field.stadium.name }}</td>
+                <td>{{ reservation.time_slot.field.number }}{% if reservation.time_slot.field.field_type %}<br>{{ reservation.time_slot.field.field_type }}{% endif %}</td>
+                <td>
+                  {{ reservation.time_slot.date|date:"m-d" }}
+                  {{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}
+                </td>
+                <td>
+                  {{ reservation.get_status_display }}
+                  {% if reservation.status == "pending" or reservation.status == "approved" %}
+                    <form method="post" action="{% url 'reservations:cancel' reservation.pk %}">
+                      {% csrf_token %}
+                      <button class="button button-danger" type="submit">取消预约</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr class="reservation-empty-row">
+              <td colspan="4">你还没有预约。</td>
+            </tr>
+            <tr class="reservation-empty-row">
+              <td></td><td></td><td></td><td></td>
+            </tr>
+            <tr class="reservation-empty-row">
+              <td></td><td></td><td></td><td></td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 {% endblock %}

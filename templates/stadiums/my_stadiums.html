@@ -1,6 +1,145 @@
-﻿{% extends "base.html" %}
-{% block title %}我的场馆 - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>我的场馆</h1><div class="actions"><a class="button" href="{% url 'stadiums:create' %}">提交场馆</a></div>
-  {% if stadiums %}<section class="grid" aria-label="我的场馆列表">{% for stadium in stadiums %}<article class="item"><strong>{{ stadium.name }}</strong><span>地址：{{ stadium.address }}</span><br><span>电话：{{ stadium.phone_number }}</span><br><span>审核：{{ stadium.get_audit_status_display }}</span><br><span>状态：{% if stadium.is_open %}开放{% else %}未开放{% endif %}</span>{% if stadium.deletion_requested %}<p class="danger">删除申请审核中</p>{% endif %}<div class="actions">{% if stadium.audit_status == "approved" and stadium.is_open and not stadium.deletion_requested %}<a class="button" href="{% url 'stadiums:field_list' stadium.pk %}">管理场地</a>{% endif %}<a href="{% url 'stadiums:edit' stadium.pk %}">修改</a><form method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">{% csrf_token %}<button class="button button-danger" type="submit">申请删除</button></form></div></article>{% endfor %}</section>{% else %}<p class="empty">还没有提交场馆。</p>{% endif %}
+{% extends "stadiums/stadium_admin_base.html" %}
+{% block title %}场馆管理 - 体育场馆预约系统{% endblock %}
+{% block stadium_admin_heading %}场馆管理{% endblock %}
+{% block stadium_admin_style %}
+  .stadium-table-wrap {
+    overflow-x: auto;
+  }
+  .stadium-table {
+    width: 100%;
+    max-width: 980px;
+    min-width: 860px;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .stadium-table th,
+  .stadium-table td {
+    border: 3px solid #222222;
+    padding: 18px 14px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+  }
+  .stadium-table th {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .stadium-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .stadium-action-button:hover {
+    text-decoration: none;
+    filter: brightness(0.98);
+  }
+  .stadium-action-button.is-muted {
+    background: #e5e7eb;
+  }
+  .stadium-action-form {
+    display: inline;
+  }
+  .stadium-add-wrap {
+    max-width: 980px;
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+  }
+  .stadium-add-button {
+    width: min(100%, 360px);
+    min-height: 62px;
+    border: 2px solid #8b5cf6;
+    background: #d9d9d9;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stadium-add-button:hover {
+    text-decoration: none;
+  }
+  .status-danger {
+    color: #b91c1c;
+    font-weight: 700;
+  }
+{% endblock %}
+{% block stadium_admin_style_mobile %}
+  .stadium-table th,
+  .stadium-table td {
+    padding: 14px 10px;
+    font-size: 16px;
+  }
+{% endblock %}
+{% block stadium_admin_content %}
+  {% if stadiums %}
+    <div class="stadium-table-wrap">
+      <table class="stadium-table" aria-label="我的场馆列表">
+        <thead>
+          <tr>
+            <th>我的场馆</th>
+            <th>审核状态</th>
+            <th>操作</th>
+            <th>操作</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stadium in stadiums %}
+            <tr>
+              <td>{{ stadium.name }}</td>
+              <td>
+                {% if stadium.deletion_requested %}
+                  <span class="status-danger">删除审核中</span>
+                {% else %}
+                  {{ stadium.get_audit_status_display }}
+                {% endif %}
+              </td>
+              <td>
+                {% if stadium.audit_status == "approved" and stadium.is_open and not stadium.deletion_requested %}
+                  <a class="stadium-action-button" href="{% url 'stadiums:field_list' stadium.pk %}">场地管理</a>
+                {% elif stadium.deletion_requested %}
+                  <span class="stadium-action-button is-muted">等待处理</span>
+                {% else %}
+                  <a class="stadium-action-button" href="{% url 'stadiums:edit' stadium.pk %}">修改信息</a>
+                {% endif %}
+              </td>
+              <td>
+                {% if not stadium.deletion_requested %}
+                  <form class="stadium-action-form" method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">
+                    {% csrf_token %}
+                    <button class="stadium-action-button" type="submit">删除场馆</button>
+                  </form>
+                {% endif %}
+              </td>
+              <td>
+                {% if not stadium.deletion_requested %}
+                  <a class="stadium-action-button" href="{% url 'stadiums:edit' stadium.pk %}">修改信息</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">还没有提交场馆。</p>
+  {% endif %}
+  <div class="stadium-add-wrap">
+    <a class="stadium-add-button" href="{% url 'stadiums:create' %}">添加场馆</a>
+  </div>
 {% endblock %}
