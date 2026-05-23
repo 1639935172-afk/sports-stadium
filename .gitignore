@@ -11,4 +11,5 @@ media/
 .vscode/
 *.docx
 .docx
-.txt
+*.txt
+*.zip

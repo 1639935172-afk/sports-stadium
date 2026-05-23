@@ -114,7 +114,7 @@
     box-shadow: none;
   }
   .profile-actions .button-danger {
-    background: #3fa9f5;
+    background: #dc2626;
   }
 {% endblock %}
 {% block account_center_style_tablet %}
@@ -173,6 +173,7 @@
   </div>
 
   <div class="profile-actions">
+    <a class="button" href="{% url 'accounts:password_change' %}">修改密码</a>
     <a class="button" href="{% url 'accounts:logout' %}">退出登录</a>
     <a class="button button-danger" href="{% url 'accounts:account_cancel' %}">注销账号</a>
   </div>

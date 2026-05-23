@@ -367,6 +367,23 @@ class SystemUserManagementTests(TestCase):
         self.assertContains(response, self.ordinary_user.phone_number)
         self.assertNotContains(response, self.stadium_admin.phone_number)
 
+    def test_user_list_can_filter_by_role(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.get(reverse('accounts:system_user_list'), {'role': UserRole.STADIUM_ADMIN})
+
+        self.assertContains(response, self.stadium_admin.phone_number)
+        self.assertNotContains(response, self.ordinary_user.phone_number)
+
+    def test_user_list_defaults_to_all_roles(self):
+        self.client.force_login(self.system_admin)
+
+        response = self.client.get(reverse('accounts:system_user_list'))
+
+        self.assertContains(response, self.system_admin.phone_number)
+        self.assertContains(response, self.stadium_admin.phone_number)
+        self.assertContains(response, self.ordinary_user.phone_number)
+
     def test_non_system_admin_cannot_access_user_management(self):
         self.client.force_login(self.ordinary_user)
 
@@ -384,8 +401,8 @@ class SystemUserManagementTests(TestCase):
             {
                 'nickname': 'Managed User',
                 'role': UserRole.STADIUM_ADMIN,
-                'is_active': '',
-                'is_cancelled': 'on',
+                'is_active': 'False',
+                'is_cancelled': 'True',
             },
             follow=True,
         )
@@ -406,8 +423,8 @@ class SystemUserManagementTests(TestCase):
             {
                 'nickname': 'Locked Out',
                 'role': UserRole.ORDINARY,
-                'is_active': '',
-                'is_cancelled': 'on',
+                'is_active': 'False',
+                'is_cancelled': 'True',
             },
             follow=True,
         )
@@ -417,3 +434,32 @@ class SystemUserManagementTests(TestCase):
         self.assertEqual(self.system_admin.role, UserRole.SYSTEM_ADMIN)
         self.assertTrue(self.system_admin.is_active)
         self.assertFalse(self.system_admin.is_cancelled)
+
+    def test_system_admin_cannot_manage_another_system_admin(self):
+        User = get_user_model()
+        other_system_admin = User.objects.create_user(
+            phone_number='13010000004',
+            password='pass',
+            role=UserRole.SYSTEM_ADMIN,
+            nickname='Other Admin',
+        )
+        self.client.force_login(self.system_admin)
+
+        response = self.client.post(
+            reverse('accounts:system_user_edit', args=[other_system_admin.pk]),
+            {
+                'nickname': 'Changed Admin',
+                'role': UserRole.ORDINARY,
+                'is_active': 'False',
+                'is_cancelled': 'True',
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('accounts:system_user_list'))
+        other_system_admin.refresh_from_db()
+        self.assertEqual(other_system_admin.nickname, 'Other Admin')
+        self.assertEqual(other_system_admin.role, UserRole.SYSTEM_ADMIN)
+        self.assertTrue(other_system_admin.is_active)
+        self.assertFalse(other_system_admin.is_cancelled)
+        self.assertContains(response, '系统管理员之间不能互相管理')

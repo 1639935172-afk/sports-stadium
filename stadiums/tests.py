@@ -1,7 +1,10 @@
 from datetime import date, time
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 
@@ -10,6 +13,10 @@ from accounts.models import UserRole
 from .models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
 
+TEST_MEDIA_ROOT = Path(__file__).resolve().parent.parent / 'test_media'
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class StadiumWorkflowTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -35,6 +42,14 @@ class StadiumWorkflowTests(TestCase):
             role=UserRole.ORDINARY,
         )
 
+    def tearDown(self):
+        if TEST_MEDIA_ROOT.exists():
+            for path in sorted(TEST_MEDIA_ROOT.rglob('*'), reverse=True):
+                if path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+
     def stadium_payload(self, **overrides):
         payload = {
             'name': '南航体育馆',
@@ -45,6 +60,20 @@ class StadiumWorkflowTests(TestCase):
         payload.update(overrides)
         return payload
 
+    def image_upload(self, name='stadium.jpg'):
+        return SimpleUploadedFile(
+            name,
+            (
+                b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00'
+                b'\xff\xdb\x00C\x00' + b'\x08' * 64 +
+                b'\xff\xc0\x00\x11\x08\x00\x01\x00\x01\x03\x01\x11\x00\x02\x11\x01\x03\x11\x01'
+                b'\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08'
+                b'\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                b'\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00?\x00\xd2\xcf \xff\xd9'
+            ),
+            content_type='image/jpeg',
+        )
+
     def create_pending_stadium(self, owner=None):
         return Stadium.objects.create(
             owner=owner or self.stadium_admin,
@@ -54,13 +83,18 @@ class StadiumWorkflowTests(TestCase):
     def test_stadium_admin_can_submit_stadium_for_review(self):
         self.client.force_login(self.stadium_admin)
 
-        response = self.client.post(reverse('stadiums:create'), self.stadium_payload(), follow=True)
+        response = self.client.post(
+            reverse('stadiums:create'),
+            self.stadium_payload(cover_image=self.image_upload()),
+            follow=True,
+        )
 
         self.assertRedirects(response, reverse('stadiums:my_stadiums'))
         stadium = Stadium.objects.get(name='南航体育馆')
         self.assertEqual(stadium.owner, self.stadium_admin)
         self.assertEqual(stadium.audit_status, StadiumAuditStatus.PENDING)
         self.assertFalse(stadium.is_open)
+        self.assertTrue(stadium.cover_image.name.startswith('stadium_covers/'))
 
     def test_stadium_phone_number_must_be_eleven_digit_mobile(self):
         self.client.force_login(self.stadium_admin)
@@ -193,7 +227,73 @@ class StadiumWorkflowTests(TestCase):
         self.assertEqual(stadium.audit_status, StadiumAuditStatus.APPROVED)
         self.assertTrue(stadium.is_open)
 
+    def test_stadium_admin_can_cancel_own_deletion_request(self):
+        stadium = self.create_pending_stadium()
+        stadium.approve()
+        stadium.request_deletion()
+        self.client.force_login(self.stadium_admin)
 
+        response = self.client.post(reverse('stadiums:delete_request_cancel', args=[stadium.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('stadiums:my_stadiums'))
+        stadium.refresh_from_db()
+        self.assertFalse(stadium.deletion_requested)
+        self.assertEqual(stadium.audit_status, StadiumAuditStatus.APPROVED)
+        self.assertTrue(stadium.is_open)
+
+    def test_stadium_admin_can_open_user_view_preview_modal_for_own_stadium(self):
+        stadium = self.create_pending_stadium()
+        stadium.approve()
+        Field.objects.create(
+            stadium=stadium,
+            number='A1',
+            field_type='羽毛球',
+            price_per_hour='88.00',
+            is_active=True,
+        )
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.get(reverse('stadiums:my_stadiums'), {'modal': 'preview', 'preview': stadium.pk})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '用户视角详情预览')
+        self.assertContains(response, stadium.name)
+        self.assertContains(response, 'A1')
+
+    def test_stadium_admin_can_update_cover_image_from_preview_modal(self):
+        stadium = self.create_pending_stadium()
+        stadium.approve()
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:cover_update', args=[stadium.pk]),
+            {'cover_image': self.image_upload('preview.jpg')},
+            follow=True,
+        )
+
+        self.assertRedirects(response, f"{reverse('stadiums:my_stadiums')}?modal=preview&preview={stadium.pk}")
+        stadium.refresh_from_db()
+        self.assertTrue(stadium.cover_image.name.startswith('stadium_covers/'))
+        self.assertContains(response, '场馆照片已更新')
+
+    def test_detail_page_shows_uploaded_cover_image(self):
+        stadium = self.create_stadium_with_image()
+
+        response = self.client.get(reverse('stadiums:detail', args=[stadium.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, stadium.cover_image.url)
+
+    def create_stadium_with_image(self):
+        stadium = self.create_pending_stadium()
+        stadium.cover_image = self.image_upload()
+        stadium.save()
+        stadium.approve()
+        stadium.refresh_from_db()
+        return stadium
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class PublicStadiumTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -207,6 +307,14 @@ class PublicStadiumTests(TestCase):
             password='pass',
             role=UserRole.ORDINARY,
         )
+
+    def tearDown(self):
+        if TEST_MEDIA_ROOT.exists():
+            for path in sorted(TEST_MEDIA_ROOT.rglob('*'), reverse=True):
+                if path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
 
     def create_stadium(self, name, **overrides):
         data = {
@@ -246,6 +354,42 @@ class PublicStadiumTests(TestCase):
 
         self.assertContains(response, 'North Basketball Arena')
         self.assertNotContains(response, 'South Tennis Hall')
+
+    def test_public_list_can_search_by_active_field_type_or_number(self):
+        north = self.create_stadium('North Sports Center')
+        south = self.create_stadium('South Sports Center')
+        Field.objects.create(
+            stadium=north,
+            field_type='羽毛球',
+            number='A12',
+            price_per_hour='80.00',
+            is_active=True,
+        )
+        Field.objects.create(
+            stadium=south,
+            field_type='篮球',
+            number='B08',
+            price_per_hour='90.00',
+            is_active=True,
+        )
+        Field.objects.create(
+            stadium=south,
+            field_type='网球',
+            number='X99',
+            price_per_hour='100.00',
+            is_active=False,
+        )
+
+        type_response = self.client.get(reverse('stadiums:list'), {'q': '羽毛球'})
+        self.assertContains(type_response, north.name)
+        self.assertNotContains(type_response, south.name)
+
+        number_response = self.client.get(reverse('stadiums:list'), {'q': 'B08'})
+        self.assertContains(number_response, south.name)
+        self.assertNotContains(number_response, north.name)
+
+        inactive_response = self.client.get(reverse('stadiums:list'), {'q': 'X99'})
+        self.assertNotContains(inactive_response, south.name)
 
     def test_public_detail_allows_public_stadium(self):
         stadium = self.create_stadium('Public Detail Center')

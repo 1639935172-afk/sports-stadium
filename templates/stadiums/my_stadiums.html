@@ -7,8 +7,8 @@
   }
   .stadium-table {
     width: 100%;
-    max-width: 980px;
-    min-width: 860px;
+    max-width: 1120px;
+    min-width: 1040px;
     border-collapse: collapse;
     background: #fff;
   }
@@ -48,11 +48,14 @@
   .stadium-action-button.is-muted {
     background: #e5e7eb;
   }
+  .stadium-action-button.is-danger {
+    background: #fca5a5;
+  }
   .stadium-action-form {
     display: inline;
   }
   .stadium-add-wrap {
-    max-width: 980px;
+    max-width: 1120px;
     display: flex;
     justify-content: center;
     margin-top: 26px;
@@ -77,12 +80,473 @@
     color: #b91c1c;
     font-weight: 700;
   }
+  .stadium-create-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 64px 24px 32px;
+    z-index: 50;
+    overflow-y: auto;
+  }
+  .stadium-create-modal {
+    width: min(100%, 760px);
+    max-height: calc(100vh - 96px);
+    border: 1px solid #d8dde6;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .stadium-create-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .stadium-create-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: #111827;
+  }
+  .stadium-create-subtitle {
+    margin: 10px 0 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #6b7280;
+  }
+  .stadium-create-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 38px;
+    line-height: 1;
+    text-decoration: none;
+    flex: 0 0 auto;
+  }
+  .stadium-create-close:hover {
+    text-decoration: none;
+    background: #e5e7eb;
+  }
+  .stadium-create-body {
+    padding: 24px 32px 28px;
+    overflow-y: auto;
+  }
+  .stadium-create-form {
+    display: grid;
+    gap: 22px;
+  }
+  .stadium-create-form .field {
+    margin: 0;
+  }
+  .stadium-create-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .stadium-create-form input,
+  .stadium-create-form textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font: inherit;
+    background: #fff;
+  }
+  .stadium-create-form textarea {
+    min-height: 180px;
+    resize: vertical;
+  }
+  .stadium-create-form input[type="file"] {
+    padding: 12px;
+    border-style: dashed;
+    background: #f8fafc;
+  }
+  .stadium-current-photo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #475569;
+  }
+  .stadium-current-photo img {
+    width: 92px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+  }
+  .stadium-create-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    padding-bottom: 4px;
+  }
+  .stadium-create-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+    min-height: 52px;
+    border: 0;
+    border-radius: 18px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .stadium-create-back {
+    color: #2563eb;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .stadium-create-back:hover {
+    text-decoration: underline;
+  }
+  .stadium-preview-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    justify-content: center;
+    padding: 40px 24px;
+    background: rgba(15, 23, 42, 0.32);
+    overflow-y: auto;
+  }
+  .stadium-preview-modal {
+    width: min(100%, 980px);
+    margin: auto 0;
+    border-radius: 28px;
+    background: #f8fafc;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+    overflow: hidden;
+  }
+  .stadium-preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 32px 22px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .stadium-preview-title {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 900;
+    color: #111827;
+  }
+  .stadium-preview-note {
+    margin: 10px 0 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #6b7280;
+  }
+  .stadium-preview-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 34px;
+    line-height: 1;
+    text-decoration: none;
+    flex: 0 0 auto;
+  }
+  .stadium-preview-close:hover {
+    text-decoration: none;
+    background: #e5e7eb;
+  }
+  .stadium-preview-body {
+    padding: 28px 32px 36px;
+  }
+  .stadium-preview-hero {
+    padding: 30px 32px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #0f172a, #1d4ed8);
+    color: #fff;
+  }
+  .stadium-preview-photo {
+    margin: 0 0 18px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+    min-height: 280px;
+  }
+  .stadium-preview-photo img {
+    display: block;
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+  }
+  .stadium-preview-photo-empty {
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .stadium-preview-hero h3 {
+    margin: 0 0 12px;
+    font-size: 34px;
+    font-weight: 900;
+  }
+  .stadium-preview-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .stadium-preview-meta-item {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .stadium-preview-meta-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.74);
+  }
+  .stadium-preview-meta-value {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .stadium-preview-section {
+    margin-top: 28px;
+    padding: 26px 28px;
+    border-radius: 24px;
+    background: #fff;
+  }
+  .stadium-preview-section h4 {
+    margin: 0 0 18px;
+    font-size: 24px;
+    font-weight: 900;
+    color: #111827;
+  }
+  .stadium-preview-upload {
+    margin-bottom: 22px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.16);
+  }
+  .stadium-preview-upload-title {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .stadium-preview-upload-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .stadium-preview-upload-field {
+    flex: 1 1 260px;
+  }
+  .stadium-preview-upload-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .stadium-preview-upload-field input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font: inherit;
+  }
+  .stadium-preview-upload-field .errors {
+    margin: 8px 0 0;
+    color: #fecaca;
+  }
+  .stadium-preview-upload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: #1d4ed8;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .stadium-preview-upload-tip {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.74);
+  }
+  .stadium-preview-field-grid,
+  .stadium-preview-comment-grid {
+    display: grid;
+    gap: 18px;
+  }
+  .stadium-preview-field-card,
+  .stadium-preview-comment-card {
+    padding: 20px 22px;
+    border: 1px solid #e5e7eb;
+    border-radius: 22px;
+    background: #f8fafc;
+  }
+  .stadium-preview-field-head,
+  .stadium-preview-comment-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .stadium-preview-field-name,
+  .stadium-preview-comment-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #111827;
+  }
+  .stadium-preview-field-sub,
+  .stadium-preview-comment-time {
+    color: #64748b;
+    font-size: 15px;
+  }
+  .stadium-preview-slot-list {
+    display: grid;
+    gap: 10px;
+  }
+  .stadium-preview-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #ffffff;
+  }
+  .stadium-preview-slot-time {
+    font-weight: 700;
+    color: #111827;
+  }
+  .stadium-preview-slot-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .stadium-preview-empty {
+    margin: 0;
+    color: #64748b;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .stadium-preview-comment-content {
+    margin: 0;
+    color: #334155;
+    line-height: 1.8;
+  }
+  .stadium-preview-footer {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .stadium-preview-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 132px;
+    min-height: 46px;
+    border-radius: 16px;
+    background: #111827;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .stadium-preview-back:hover {
+    text-decoration: none;
+    filter: brightness(1.06);
+  }
 {% endblock %}
 {% block stadium_admin_style_mobile %}
   .stadium-table th,
   .stadium-table td {
     padding: 14px 10px;
     font-size: 16px;
+  }
+  .stadium-create-overlay {
+    padding: 24px 12px;
+  }
+  .stadium-create-modal {
+    max-height: calc(100vh - 32px);
+  }
+  .stadium-create-header,
+  .stadium-create-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .stadium-create-title {
+    font-size: 22px;
+  }
+  .stadium-preview-overlay {
+    padding: 16px 10px;
+  }
+  .stadium-preview-header,
+  .stadium-preview-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .stadium-preview-title {
+    font-size: 24px;
+  }
+  .stadium-preview-hero {
+    padding: 22px 18px;
+  }
+  .stadium-preview-hero h3 {
+    font-size: 26px;
+  }
+  .stadium-preview-meta {
+    grid-template-columns: 1fr;
   }
 {% endblock %}
 {% block stadium_admin_content %}
@@ -93,6 +557,7 @@
           <tr>
             <th>我的场馆</th>
             <th>审核状态</th>
+            <th>操作</th>
             <th>操作</th>
             <th>操作</th>
             <th>操作</th>
@@ -115,20 +580,34 @@
                 {% elif stadium.deletion_requested %}
                   <span class="stadium-action-button is-muted">等待处理</span>
                 {% else %}
-                  <a class="stadium-action-button" href="{% url 'stadiums:edit' stadium.pk %}">修改信息</a>
+                  <a class="stadium-action-button" href="{% url 'stadiums:my_stadiums' %}?modal=edit&edit={{ stadium.pk }}">修改信息</a>
                 {% endif %}
               </td>
               <td>
                 {% if not stadium.deletion_requested %}
                   <form class="stadium-action-form" method="post" action="{% url 'stadiums:delete_request' stadium.pk %}">
                     {% csrf_token %}
-                    <button class="stadium-action-button" type="submit">删除场馆</button>
+                    <button
+                      class="stadium-action-button is-danger"
+                      type="submit"
+                      onclick="return confirm('确认提交删除场馆申请吗？提交后可在审核前撤销。');"
+                    >
+                      删除场馆
+                    </button>
+                  </form>
+                {% else %}
+                  <form class="stadium-action-form" method="post" action="{% url 'stadiums:delete_request_cancel' stadium.pk %}">
+                    {% csrf_token %}
+                    <button class="stadium-action-button" type="submit">撤销删除</button>
                   </form>
                 {% endif %}
               </td>
               <td>
+                <a class="stadium-action-button" href="{% url 'stadiums:my_stadiums' %}?modal=preview&preview={{ stadium.pk }}">显示详情</a>
+              </td>
+              <td>
                 {% if not stadium.deletion_requested %}
-                  <a class="stadium-action-button" href="{% url 'stadiums:edit' stadium.pk %}">修改信息</a>
+                  <a class="stadium-action-button" href="{% url 'stadiums:my_stadiums' %}?modal=edit&edit={{ stadium.pk }}">修改信息</a>
                 {% endif %}
               </td>
             </tr>
@@ -140,6 +619,190 @@
     <p class="empty">还没有提交场馆。</p>
   {% endif %}
   <div class="stadium-add-wrap">
-    <a class="stadium-add-button" href="{% url 'stadiums:create' %}">添加场馆</a>
+    <a class="stadium-add-button" href="{% url 'stadiums:my_stadiums' %}?modal=create">添加场馆</a>
   </div>
+  {% if show_create_modal or show_edit_modal %}
+    <div class="stadium-create-overlay">
+      <div class="stadium-create-modal">
+        <div class="stadium-create-header">
+          <div>
+            <h3 class="stadium-create-title">{% if show_edit_modal %}修改场馆信息{% else %}添加场馆信息{% endif %}</h3>
+            <p class="stadium-create-subtitle">
+              {% if show_edit_modal %}
+                在当前管理页中修改场馆基础信息，提交后重新进入审核流程。
+              {% else %}
+                在当前管理页中填写场馆基础信息，提交后进入审核流程。
+              {% endif %}
+            </p>
+          </div>
+          <a class="stadium-create-close" href="{% url 'stadiums:my_stadiums' %}" aria-label="关闭">×</a>
+        </div>
+        <div class="stadium-create-body">
+          <form
+            class="stadium-create-form"
+            method="post"
+            enctype="multipart/form-data"
+            action="{% if show_edit_modal %}{% url 'stadiums:edit' edit_stadium.pk %}{% else %}{% url 'stadiums:create' %}{% endif %}"
+            novalidate
+          >
+            {% csrf_token %}
+            {% if stadium_modal_form.non_field_errors %}
+              <ul class="errors">
+                {% for error in stadium_modal_form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% for field in stadium_modal_form %}
+              <div class="field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.name == "cover_image" and show_edit_modal and edit_stadium.cover_image %}
+                  <div class="stadium-current-photo">
+                    <img src="{{ edit_stadium.cover_image.url }}" alt="{{ edit_stadium.name }}当前照片">
+                    <span>当前已上传场馆照片，可直接重新选择新图片替换。</span>
+                  </div>
+                {% endif %}
+                {% if field.errors %}
+                  <ul class="errors">
+                    {% for error in field.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <div class="stadium-create-actions">
+              <button class="stadium-create-submit" type="submit">提交审核</button>
+              <a class="stadium-create-back" href="{% url 'stadiums:my_stadiums' %}">返回我的场馆</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  {% if show_preview_modal and preview_stadium %}
+    <div class="stadium-preview-overlay">
+      <div class="stadium-preview-modal">
+        <div class="stadium-preview-header">
+          <div>
+            <h3 class="stadium-preview-title">用户视角详情预览</h3>
+            <p class="stadium-preview-note">这里展示的是普通用户看到的场馆详情样子。预览只用于查看，不会在这里提交预约或评论。</p>
+          </div>
+          <a class="stadium-preview-close" href="{% url 'stadiums:my_stadiums' %}" aria-label="关闭">×</a>
+        </div>
+        <div class="stadium-preview-body">
+          <section class="stadium-preview-hero">
+            <div class="stadium-preview-upload">
+              <p class="stadium-preview-upload-title">场馆照片上传</p>
+              <form
+                class="stadium-preview-upload-form"
+                method="post"
+                action="{% url 'stadiums:cover_update' preview_stadium.pk %}"
+                enctype="multipart/form-data"
+                novalidate
+              >
+                {% csrf_token %}
+                <div class="stadium-preview-upload-field">
+                  <label for="{{ preview_cover_form.cover_image.id_for_label }}">上传新照片</label>
+                  {{ preview_cover_form.cover_image }}
+                  {% if preview_cover_form.cover_image.errors %}
+                    <ul class="errors">
+                      {% for error in preview_cover_form.cover_image.errors %}
+                        <li>{{ error }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </div>
+                <button class="stadium-preview-upload-button" type="submit">保存照片</button>
+              </form>
+              <p class="stadium-preview-upload-tip">支持 jpg、jpeg、png、webp。上传后会同步显示在用户详情页。</p>
+            </div>
+            {% if preview_stadium.cover_image %}
+              <div class="stadium-preview-photo">
+                <img src="{{ preview_stadium.cover_image.url }}" alt="{{ preview_stadium.name }}照片">
+              </div>
+            {% else %}
+              <div class="stadium-preview-photo">
+                <div class="stadium-preview-photo-empty">该场馆暂未上传照片</div>
+              </div>
+            {% endif %}
+            <h3>{{ preview_stadium.name }}</h3>
+            <div>{{ preview_stadium.information|default:"暂无介绍" }}</div>
+            <div class="stadium-preview-meta">
+              <div class="stadium-preview-meta-item">
+                <span class="stadium-preview-meta-label">地址</span>
+                <span class="stadium-preview-meta-value">{{ preview_stadium.address }}</span>
+              </div>
+              <div class="stadium-preview-meta-item">
+                <span class="stadium-preview-meta-label">联系电话</span>
+                <span class="stadium-preview-meta-value">{{ preview_stadium.phone_number }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="stadium-preview-section">
+            <h4>可预约场地</h4>
+            {% if preview_fields %}
+              <div class="stadium-preview-field-grid">
+                {% for field in preview_fields %}
+                  <article class="stadium-preview-field-card">
+                    <div class="stadium-preview-field-head">
+                      <div>
+                        <div class="stadium-preview-field-name">{{ field.number }}</div>
+                        <div class="stadium-preview-field-sub">类型：{{ field.field_type }}</div>
+                      </div>
+                      <div class="stadium-preview-field-sub">价格：{{ field.price_per_hour }} 元/小时</div>
+                    </div>
+                    {% if field.available_time_slots %}
+                      <div class="stadium-preview-slot-list">
+                        {% for slot in field.available_time_slots %}
+                          <div class="stadium-preview-slot">
+                            <span class="stadium-preview-slot-time">{{ slot.date|date:"Y-m-d" }} {{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</span>
+                            <span class="stadium-preview-slot-action">预约入口</span>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="stadium-preview-empty">暂无可约时段。</p>
+                    {% endif %}
+                  </article>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="stadium-preview-empty">暂无可预约场地。</p>
+            {% endif %}
+          </section>
+
+          <section class="stadium-preview-section">
+            <h4>用户评论</h4>
+            {% if preview_comment_form %}
+              <p class="stadium-preview-empty">普通用户登录后可在这里看到评论输入表单。</p>
+            {% else %}
+              <p class="stadium-preview-empty">当前登录身份不是普通用户，所以这里只展示评论列表视图。</p>
+            {% endif %}
+            {% if preview_comments %}
+              <div class="stadium-preview-comment-grid">
+                {% for comment in preview_comments %}
+                  <article class="stadium-preview-comment-card">
+                    <div class="stadium-preview-comment-head">
+                      <div class="stadium-preview-comment-name">{{ comment.user.nickname|default:comment.user.phone_number }}</div>
+                      <div class="stadium-preview-comment-time">{{ comment.created_at|date:"Y-m-d H:i" }}</div>
+                    </div>
+                    <p class="stadium-preview-comment-content">{{ comment.content }}</p>
+                  </article>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="stadium-preview-empty">暂无已通过评论。</p>
+            {% endif %}
+          </section>
+
+          <div class="stadium-preview-footer">
+            <a class="stadium-preview-back" href="{% url 'stadiums:my_stadiums' %}">返回场馆管理</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}

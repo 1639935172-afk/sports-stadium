@@ -1,6 +1,317 @@
-﻿{% extends "base.html" %}
+{% extends "stadiums/stadium_admin_base.html" %}
 {% block title %}场地管理 - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>{{ stadium.name }} 场地管理</h1><div class="actions"><a class="button" href="{% url 'stadiums:field_create' stadium.pk %}">新增场地</a><a href="{% url 'stadiums:my_stadiums' %}">返回我的场馆</a></div>
-  {% if fields %}<section class="grid" aria-label="场地列表">{% for field in fields %}<article class="item"><strong>{{ field.number }}</strong><span>类型：{{ field.field_type }}</span><br><span>价格：{{ field.price_per_hour }} 元/小时</span><br><span>状态：{% if field.is_active %}启用{% else %}停用{% endif %}</span><div class="actions"><a class="button" href="{% url 'stadiums:time_slot_list' field.pk %}">管理时段</a><a href="{% url 'stadiums:field_edit' field.pk %}">编辑</a>{% if field.is_active %}<form method="post" action="{% url 'stadiums:field_disable' field.pk %}">{% csrf_token %}<button class="button button-secondary" type="submit">停用</button></form>{% endif %}<form method="post" action="{% url 'stadiums:field_delete' field.pk %}">{% csrf_token %}<button class="button button-danger" type="submit">删除</button></form></div></article>{% endfor %}</section>{% else %}<p class="empty">当前还没有场地。</p>{% endif %}
+{% block stadium_admin_heading %}{{ stadium.name }}-场地管理{% endblock %}
+{% block stadium_admin_style %}
+  .field-table-wrap {
+    overflow-x: auto;
+  }
+  .field-table {
+    width: 100%;
+    max-width: 980px;
+    min-width: 860px;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .field-table th,
+  .field-table td {
+    border: 3px solid #222222;
+    padding: 18px 14px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+  }
+  .field-table th {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .field-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .field-action-button:hover {
+    text-decoration: none;
+    filter: brightness(0.98);
+  }
+  .field-action-button.is-danger {
+    background: #fca5a5;
+  }
+  .field-action-button.is-muted {
+    background: #d1d5db;
+  }
+  .field-action-form {
+    display: inline;
+  }
+  .field-add-wrap {
+    max-width: 980px;
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+  }
+  .field-add-button {
+    width: min(100%, 340px);
+    min-height: 62px;
+    border: 0;
+    border-radius: 14px;
+    background: #d9d9d9;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .field-add-button:hover {
+    text-decoration: none;
+    background: #d4d4d8;
+  }
+  .field-empty {
+    max-width: 980px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    padding: 24px;
+    color: #6b7280;
+  }
+  .field-edit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 64px 24px 32px;
+    z-index: 50;
+  }
+  .field-edit-modal {
+    width: min(100%, 720px);
+    border: 1px solid #d8dde6;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+  }
+  .field-edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .field-edit-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: #111827;
+  }
+  .field-edit-subtitle {
+    margin: 10px 0 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #6b7280;
+  }
+  .field-edit-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 38px;
+    line-height: 1;
+    text-decoration: none;
+    flex: 0 0 auto;
+  }
+  .field-edit-close:hover {
+    text-decoration: none;
+    background: #e5e7eb;
+  }
+  .field-edit-body {
+    padding: 24px 32px 28px;
+  }
+  .field-edit-form {
+    display: grid;
+    gap: 20px;
+  }
+  .field-edit-form .field {
+    margin: 0;
+  }
+  .field-edit-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .field-edit-form input,
+  .field-edit-form select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font: inherit;
+    background: #fff;
+  }
+  .field-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .field-edit-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+    min-height: 52px;
+    border: 0;
+    border-radius: 18px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .field-edit-back {
+    color: #2563eb;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .field-edit-back:hover {
+    text-decoration: underline;
+  }
+{% endblock %}
+{% block stadium_admin_style_mobile %}
+  .field-table th,
+  .field-table td {
+    padding: 14px 10px;
+    font-size: 16px;
+  }
+  .field-action-button {
+    min-width: 84px;
+    min-height: 42px;
+    font-size: 16px;
+  }
+  .field-edit-overlay {
+    padding: 24px 12px;
+  }
+  .field-edit-header,
+  .field-edit-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .field-edit-title {
+    font-size: 22px;
+  }
+{% endblock %}
+{% block stadium_admin_content %}
+  {% if fields %}
+    <div class="field-table-wrap">
+      <table class="field-table" aria-label="场地列表">
+        <thead>
+          <tr>
+            <th>场地名</th>
+            <th>场地价格/h</th>
+            <th>操作</th>
+            <th>操作</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for field in fields %}
+            <tr>
+              <td>{{ field.number }}</td>
+              <td>{{ field.price_per_hour }}</td>
+              <td>
+                <a class="field-action-button" href="{% url 'stadiums:field_list' stadium.pk %}?modal=edit&edit={{ field.pk }}">修改</a>
+              </td>
+              <td>
+                <a class="field-action-button" href="{% url 'stadiums:time_slot_list' field.pk %}">时段管理</a>
+              </td>
+              <td>
+                {% if field.is_active %}
+                  <form class="field-action-form" method="post" action="{% url 'stadiums:field_delete' field.pk %}">
+                    {% csrf_token %}
+                    <button
+                      class="field-action-button is-danger"
+                      type="submit"
+                      onclick="return confirm('确认删除这个场地吗？删除后将无法恢复。');"
+                    >
+                      删除场地
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="field-action-button is-muted">已停用</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="field-empty">当前还没有场地，先添加场地信息再继续管理时段。</div>
+  {% endif %}
+  <div class="field-add-wrap">
+    <a class="field-add-button" href="{% url 'stadiums:field_create' stadium.pk %}">添加场地信息</a>
+  </div>
+  {% if show_edit_field_modal %}
+    <div class="field-edit-overlay">
+      <div class="field-edit-modal">
+        <div class="field-edit-header">
+          <div>
+            <h3 class="field-edit-title">修改场地信息</h3>
+            <p class="field-edit-subtitle">在当前场地管理页中修改场地基础信息，保存后立即更新。</p>
+          </div>
+          <a class="field-edit-close" href="{% url 'stadiums:field_list' stadium.pk %}" aria-label="关闭">×</a>
+        </div>
+        <div class="field-edit-body">
+          <form class="field-edit-form" method="post" action="{% url 'stadiums:field_edit' edit_field.pk %}" novalidate>
+            {% csrf_token %}
+            {% if field_modal_form.non_field_errors %}
+              <ul class="errors">
+                {% for error in field_modal_form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% for field in field_modal_form %}
+              <div class="field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.errors %}
+                  <ul class="errors">
+                    {% for error in field.errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <div class="field-edit-actions">
+              <button class="field-edit-submit" type="submit">保存</button>
+              <a class="field-edit-back" href="{% url 'stadiums:field_list' stadium.pk %}">返回场地管理</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}

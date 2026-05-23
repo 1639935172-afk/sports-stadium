@@ -67,6 +67,9 @@
       color: inherit;
       text-decoration: none;
     }
+    .system-admin-title-link.is-active {
+      color: #5673ff;
+    }
     .system-admin-title-link:hover {
       text-decoration: none;
       color: #5673ff;
@@ -156,7 +159,12 @@
         <span></span>
       </div>
       <h1 class="system-admin-title">
-        <a class="system-admin-title-link" href="{% url 'accounts:profile' %}">管理员信息</a>
+        <a
+          class="system-admin-title-link {% if request.resolver_match.namespace == 'accounts' and request.resolver_match.url_name in 'profile profile_edit password_change account_cancel' %}is-active{% endif %}"
+          href="{% url 'accounts:profile' %}"
+        >
+          管理员信息
+        </a>
       </h1>
       <nav class="system-admin-nav" aria-label="系统管理员导航">
         <a class="{% if request.resolver_match.url_name == 'system_user_list' or request.resolver_match.url_name == 'system_user_edit' %}is-active{% endif %}" href="{% url 'accounts:system_user_list' %}">管理用户</a>

@@ -1,6 +1,212 @@
-﻿{% extends "base.html" %}
+{% extends "stadiums/stadium_admin_base.html" %}
 {% block title %}{{ title }} - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>{{ title }}</h1>
-  <div class="panel"><form method="post" novalidate>{% csrf_token %}{% if form.non_field_errors %}<ul class="errors">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{% if field.errors %}<ul class="errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>{% endfor %}<div class="actions"><button class="button" type="submit">提交审核</button><a href="{% url 'stadiums:my_stadiums' %}">返回我的场馆</a></div></form></div>
+{% block stadium_admin_heading %}场馆管理{% endblock %}
+{% block stadium_admin_style %}
+  .stadium-form-stage {
+    position: relative;
+    min-height: 680px;
+    max-width: 1080px;
+    padding: 28px 28px 36px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.42);
+  }
+  .stadium-form-modal {
+    width: min(100%, 680px);
+    margin: 0 auto;
+    border: 1px solid #d8dde6;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+  }
+  .stadium-form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .stadium-form-title-wrap {
+    display: grid;
+    gap: 8px;
+  }
+  .stadium-form-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: #111827;
+  }
+  .stadium-form-subtitle {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #6b7280;
+  }
+  .stadium-form-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 24px;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .stadium-form-close:hover {
+    text-decoration: none;
+    background: #e5e7eb;
+  }
+  .stadium-form-body {
+    padding: 24px 28px 28px;
+  }
+  .stadium-form {
+    display: grid;
+    gap: 18px;
+  }
+  .stadium-form .field {
+    margin: 0;
+  }
+  .stadium-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .stadium-form input,
+  .stadium-form textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font: inherit;
+    background: #fff;
+  }
+  .stadium-form textarea {
+    min-height: 220px;
+    resize: vertical;
+  }
+  .stadium-form input[type="file"] {
+    padding: 12px;
+    border-style: dashed;
+    background: #f8fafc;
+  }
+  .stadium-form-photo-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #475569;
+  }
+  .stadium-form-photo-tip img {
+    width: 92px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+  }
+  .stadium-form .errors {
+    margin: 8px 0 0;
+  }
+  .stadium-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .stadium-submit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    min-height: 48px;
+    border: 0;
+    border-radius: 12px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .stadium-back-link {
+    color: #2563eb;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .stadium-back-link:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 640px) {
+    .stadium-form-stage {
+      padding: 16px;
+      min-height: unset;
+    }
+    .stadium-form-header,
+    .stadium-form-body {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+    .stadium-form-title {
+      font-size: 22px;
+    }
+    .stadium-form-subtitle {
+      font-size: 14px;
+    }
+  }
+{% endblock %}
+{% block stadium_admin_content %}
+  <section class="stadium-form-stage">
+    <div class="stadium-form-modal">
+      <div class="stadium-form-header">
+        <div class="stadium-form-title-wrap">
+          <h3 class="stadium-form-title">{{ title }}</h3>
+          <p class="stadium-form-subtitle">在当前管理页中填写场馆基础信息，提交后进入审核流程。</p>
+        </div>
+        <a class="stadium-form-close" href="{% url 'stadiums:my_stadiums' %}" aria-label="关闭">×</a>
+      </div>
+      <div class="stadium-form-body">
+        <form class="stadium-form" method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <ul class="errors">
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% for field in form %}
+            <div class="field">
+              {{ field.label_tag }}
+              {{ field }}
+              {% if field.name == "cover_image" and form.instance.cover_image %}
+                <div class="stadium-form-photo-tip">
+                  <img src="{{ form.instance.cover_image.url }}" alt="{{ form.instance.name }}当前照片">
+                  <span>当前已上传场馆照片，可重新选择新图片替换。</span>
+                </div>
+              {% endif %}
+              {% if field.errors %}
+                <ul class="errors">
+                  {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+          <div class="stadium-form-actions">
+            <button class="stadium-submit-button" type="submit">提交审核</button>
+            <a class="stadium-back-link" href="{% url 'stadiums:my_stadiums' %}">返回我的场馆</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
 {% endblock %}
