@@ -17,9 +17,19 @@
   }
   .user-toolbar input {
     width: 270px;
-    border: 0;
+    border: 1px solid #cbd5e1;
     border-radius: 14px;
-    background: #76ecf4;
+    background: #fff;
+    padding: 8px 16px;
+    font-size: 18px;
+    color: #111827;
+  }
+  .user-toolbar select {
+    width: 190px;
+    min-height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #fff;
     padding: 8px 16px;
     font-size: 18px;
     color: #111827;
@@ -91,6 +101,10 @@
     width: min(100%, 270px);
     font-size: 16px;
   }
+  .user-toolbar select {
+    width: min(100%, 190px);
+    font-size: 16px;
+  }
   .user-table th,
   .user-table td {
     padding: 14px 12px;
@@ -101,8 +115,14 @@
   <form method="get" class="user-toolbar">
     <label for="q">搜索：</label>
     <input id="q" name="q" value="{{ query }}" placeholder="请输入用户名">
+    <label for="role">筛选：</label>
+    <select id="role" name="role">
+      {% for value, label in role_choices %}
+        <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
     <button class="button" type="submit">查询</button>
-    {% if query %}<a class="clear-link" href="{% url 'accounts:system_user_list' %}">清空</a>{% endif %}
+    {% if query or selected_role %}<a class="clear-link" href="{% url 'accounts:system_user_list' %}">清空</a>{% endif %}
   </form>
   {% if users %}
     <div class="user-table-wrap">
@@ -139,7 +159,7 @@
                 {% endif %}
               </td>
               <td class="actions-cell">
-                {% if user != request.user %}
+                {% if user != request.user and not user.is_system_admin %}
                   <a class="manage-link" href="{% url 'accounts:system_user_edit' user.pk %}">管理</a>
                 {% else %}
                   -

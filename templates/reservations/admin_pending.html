@@ -1,30 +1,114 @@
 {% extends "stadiums/stadium_admin_base.html" %}
 {% block title %}预约审核 - 体育场馆预约系统{% endblock %}
 {% block stadium_admin_heading %}预约审核{% endblock %}
+{% block stadium_admin_style %}
+  .reservation-table-wrap {
+    overflow-x: auto;
+  }
+  .reservation-table {
+    width: 100%;
+    max-width: 980px;
+    min-width: 860px;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .reservation-table th,
+  .reservation-table td {
+    border: 3px solid #222222;
+    padding: 18px 14px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+  }
+  .reservation-table th {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .reservation-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .reservation-action-button:hover {
+    text-decoration: none;
+    filter: brightness(0.98);
+  }
+  .reservation-action-button.is-secondary {
+    background: #66dfe8;
+  }
+  .reservation-action-form {
+    display: inline;
+  }
+  .reservation-empty {
+    max-width: 980px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    padding: 24px;
+    color: #6b7280;
+  }
+{% endblock %}
+{% block stadium_admin_style_mobile %}
+  .reservation-table th,
+  .reservation-table td {
+    padding: 14px 10px;
+    font-size: 16px;
+  }
+  .reservation-action-button {
+    min-width: 84px;
+    min-height: 42px;
+    font-size: 16px;
+  }
+{% endblock %}
 {% block stadium_admin_content %}
   {% if reservations %}
-    <section class="grid" aria-label="待审核预约列表">
-      {% for reservation in reservations %}
-        <article class="item">
-          <strong>{{ reservation.time_slot.field.stadium.name }}</strong>
-          <span>用户：{{ reservation.user.nickname|default:reservation.user.phone_number }}</span><br>
-          <span>场地：{{ reservation.time_slot.field.number }} / {{ reservation.time_slot.field.field_type }}</span><br>
-          <span>日期：{{ reservation.time_slot.date|date:"Y-m-d" }}</span><br>
-          <span>时间：{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</span>
-          <div class="actions">
-            <form method="post" action="{% url 'reservations:approve' reservation.pk %}">
-              {% csrf_token %}
-              <button class="button" type="submit">通过</button>
-            </form>
-            <form method="post" action="{% url 'reservations:reject' reservation.pk %}">
-              {% csrf_token %}
-              <button class="button button-secondary" type="submit">拒绝</button>
-            </form>
-          </div>
-        </article>
-      {% endfor %}
-    </section>
+    <div class="reservation-table-wrap">
+      <table class="reservation-table" aria-label="待审核预约列表">
+        <thead>
+          <tr>
+            <th>预约场地</th>
+            <th>预约时段</th>
+            <th>申请人</th>
+            <th>操作</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reservation in reservations %}
+            <tr>
+              <td>{{ reservation.time_slot.field.stadium.name }}-{{ reservation.time_slot.field.number }}</td>
+              <td>{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</td>
+              <td>{{ reservation.user.nickname|default:reservation.user.phone_number }}</td>
+              <td>
+                <form class="reservation-action-form" method="post" action="{% url 'reservations:approve' reservation.pk %}">
+                  {% csrf_token %}
+                  <button class="reservation-action-button" type="submit">通过</button>
+                </form>
+              </td>
+              <td>
+                <form class="reservation-action-form" method="post" action="{% url 'reservations:reject' reservation.pk %}">
+                  {% csrf_token %}
+                  <button class="reservation-action-button is-secondary" type="submit">拒绝</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-    <p class="empty">暂无待审核预约。</p>
+    <div class="reservation-empty">暂无待审核预约。</div>
   {% endif %}
 {% endblock %}

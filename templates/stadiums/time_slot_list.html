@@ -1,6 +1,175 @@
-﻿{% extends "base.html" %}
+{% extends "stadiums/stadium_admin_base.html" %}
 {% block title %}时段管理 - 体育场馆预约系统{% endblock %}
-{% block content %}
-  <h1>{{ field.number }} 时段管理</h1><p>{{ field.stadium.name }} / {{ field.field_type }}</p><div class="actions">{% if field.is_active %}<a class="button" href="{% url 'stadiums:time_slot_create' field.pk %}">新增时段</a>{% endif %}<a href="{% url 'stadiums:field_list' field.stadium.pk %}">返回场地管理</a></div>
-  {% if time_slots %}<section class="grid" aria-label="开放时段列表">{% for slot in time_slots %}<article class="item"><strong>{{ slot.date|date:"Y-m-d" }}</strong><span>{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</span><br><span>状态：{% if slot.is_available %}可预约{% else %}不可预约{% endif %}</span><div class="actions"><a href="{% url 'stadiums:time_slot_edit' slot.pk %}">编辑</a><form method="post" action="{% url 'stadiums:time_slot_delete' slot.pk %}">{% csrf_token %}<button class="button button-danger" type="submit">删除</button></form></div></article>{% endfor %}</section>{% else %}<p class="empty">当前还没有开放时段。</p>{% endif %}
+{% block stadium_admin_heading %}{{ field.number }}-时段管理{% endblock %}
+{% block stadium_admin_style %}
+  .slot-meta {
+    margin: -10px 0 22px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #4b5563;
+  }
+  .slot-table-wrap {
+    overflow-x: auto;
+  }
+  .slot-table {
+    width: 100%;
+    max-width: 1080px;
+    min-width: 960px;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .slot-table th,
+  .slot-table td {
+    border: 3px solid #222222;
+    padding: 18px 12px;
+    font-size: 18px;
+    text-align: center;
+    vertical-align: middle;
+    color: #111827;
+  }
+  .slot-table th {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .slot-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .slot-action-button:hover {
+    text-decoration: none;
+    filter: brightness(0.98);
+  }
+  .slot-action-button.is-muted {
+    background: #d1d5db;
+  }
+  .slot-action-button.is-danger {
+    background: #fca5a5;
+  }
+  .slot-action-form {
+    display: inline;
+  }
+  .slot-status {
+    font-weight: 700;
+  }
+  .slot-status.is-open {
+    color: #0f766e;
+  }
+  .slot-status.is-closed {
+    color: #b91c1c;
+  }
+  .slot-add-wrap {
+    max-width: 1080px;
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+  }
+  .slot-add-button {
+    width: min(100%, 340px);
+    min-height: 62px;
+    border: 0;
+    border-radius: 14px;
+    background: #d9d9d9;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slot-add-button:hover {
+    text-decoration: none;
+    background: #d4d4d8;
+  }
+  .slot-empty {
+    max-width: 1080px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    padding: 24px;
+    color: #6b7280;
+  }
+{% endblock %}
+{% block stadium_admin_style_mobile %}
+  .slot-table th,
+  .slot-table td {
+    padding: 14px 10px;
+    font-size: 16px;
+  }
+  .slot-action-button {
+    min-width: 84px;
+    min-height: 42px;
+    font-size: 16px;
+  }
+{% endblock %}
+{% block stadium_admin_content %}
+  <p class="slot-meta">{{ field.stadium.name }} / {{ field.field_type }}</p>
+  {% if time_slots %}
+    <div class="slot-table-wrap">
+      <table class="slot-table" aria-label="开放时段列表">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>状态</th>
+            <th>操作</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for slot in time_slots %}
+            <tr>
+              <td>{{ slot.date|date:"Y-m-d" }}</td>
+              <td>{{ slot.start_time|time:"H:i" }}</td>
+              <td>{{ slot.end_time|time:"H:i" }}</td>
+              <td>
+                {% if slot.actual_is_available %}
+                  <span class="slot-status is-open">可预约</span>
+                {% else %}
+                  <span class="slot-status is-closed">不可预约</span>
+                {% endif %}
+              </td>
+              <td>
+                <a class="slot-action-button" href="{% url 'stadiums:time_slot_edit' slot.pk %}">修改</a>
+              </td>
+              <td>
+                <form class="slot-action-form" method="post" action="{% url 'stadiums:time_slot_delete' slot.pk %}">
+                  {% csrf_token %}
+                  <button
+                    class="slot-action-button is-danger"
+                    type="submit"
+                    onclick="return confirm('确认删除这个时段吗？删除后将无法恢复。');"
+                  >
+                    删除时段
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="slot-empty">当前还没有开放时段，请先添加时段信息。</div>
+  {% endif %}
+  <div class="slot-add-wrap">
+    {% if field.is_active %}
+      <a class="slot-add-button" href="{% url 'stadiums:time_slot_create' field.pk %}">添加时段信息</a>
+    {% else %}
+      <span class="slot-add-button">场地已停用，无法新增时段</span>
+    {% endif %}
+  </div>
 {% endblock %}

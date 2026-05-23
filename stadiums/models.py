@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
@@ -30,6 +31,12 @@ class Stadium(models.Model):
     address = models.CharField('场馆地址', max_length=255)
     phone_number = models.CharField('联系电话', max_length=20, validators=[mobile_phone_validator])
     information = models.TextField('场馆简介', blank=True)
+    cover_image = models.FileField(
+        '场馆照片',
+        upload_to='stadium_covers/',
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])],
+    )
     audit_status = models.CharField(
         '审核状态',
         max_length=20,
@@ -71,6 +78,16 @@ class Stadium(models.Model):
         type(self).objects.filter(pk=self.pk).update(
             deletion_requested=self.deletion_requested,
             audit_status=self.audit_status,
+        )
+
+    def cancel_deletion_request(self):
+        self.deletion_requested = False
+        self.audit_status = StadiumAuditStatus.APPROVED
+        self.is_open = True
+        type(self).objects.filter(pk=self.pk).update(
+            deletion_requested=self.deletion_requested,
+            audit_status=self.audit_status,
+            is_open=self.is_open,
         )
 
     def approve(self):

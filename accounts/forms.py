@@ -191,6 +191,21 @@ class AccountCancellationForm(forms.Form):
 
 
 class SystemUserManagementForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['is_active'].widget = forms.Select(
+            choices=[
+                (True, '允许登录'),
+                (False, '禁止登录'),
+            ]
+        )
+        self.fields['is_cancelled'].widget = forms.Select(
+            choices=[
+                (False, '未注销'),
+                (True, '已注销'),
+            ]
+        )
+
     class Meta:
         model = get_user_model()
         fields = ['nickname', 'role', 'is_active', 'is_cancelled']

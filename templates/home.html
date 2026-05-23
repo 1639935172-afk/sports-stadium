@@ -6,94 +6,21 @@
       display: grid;
       gap: 28px;
     }
-    .home-topbar {
+    .home-header-tabs {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .home-brand {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 54px;
-      padding: 0 22px;
-      border: 4px solid #8b5cf6;
-      background: #fff;
-      color: #111827;
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: 0;
-      box-shadow: 0 6px 18px rgba(139, 92, 246, 0.08);
-    }
-    .home-tabs {
-      display: flex;
-      align-items: center;
-      gap: 52px;
+      gap: 36px;
       flex-wrap: wrap;
       font-weight: 900;
-      font-size: 30px;
-      color: #111827;
+      font-size: 22px;
+      color: #1d4ed8;
     }
-    .home-tabs a {
+    .home-header-tabs a {
       color: inherit;
       text-decoration: none;
     }
-    .home-tabs a.is-active {
+    .home-header-tabs a.is-active {
       color: #5b6cff;
-    }
-    .home-user {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 10px 18px;
-      border-radius: 18px;
-      background: #f3f4f6;
-      min-width: 180px;
-      justify-content: flex-end;
-    }
-    .home-avatar {
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background: linear-gradient(180deg, #d1d5db, #9ca3af);
-      position: relative;
-      flex: 0 0 auto;
-    }
-    .home-avatar::before {
-      content: "";
-      position: absolute;
-      top: 11px;
-      left: 17px;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.85);
-    }
-    .home-avatar::after {
-      content: "";
-      position: absolute;
-      left: 9px;
-      bottom: 9px;
-      width: 36px;
-      height: 18px;
-      border-radius: 999px 999px 10px 10px;
-      background: rgba(255, 255, 255, 0.85);
-    }
-    .home-user-text {
-      text-align: right;
-      line-height: 1.3;
-    }
-    .home-user-name {
-      font-size: 20px;
-      font-weight: 900;
-      color: #111827;
-    }
-    .home-user-role {
-      font-size: 14px;
-      font-weight: 700;
-      color: #4b5563;
     }
     .featured-grid {
       display: grid;
@@ -115,6 +42,23 @@
         linear-gradient(180deg, #e5eefb, #d8e4f5 42%, #c5d8ef 100%);
       box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09);
     }
+    .featured-cover.has-image {
+      background: #dbeafe;
+    }
+    .featured-cover-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .featured-cover.has-image::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.42));
+    }
     .featured-cover::before {
       content: "";
       position: absolute;
@@ -125,13 +69,8 @@
       background-size: 52px 100%, 100% 42px;
       opacity: 0.3;
     }
-    .featured-cover-sport {
-      position: absolute;
-      inset: auto 16px 16px 16px;
-      color: rgba(255, 255, 255, 0.96);
-      font-size: 28px;
-      font-weight: 900;
-      text-shadow: 0 2px 10px rgba(15, 23, 42, 0.4);
+    .featured-cover.has-image::before {
+      opacity: 0;
     }
     .featured-card:nth-child(2) .featured-cover {
       background:
@@ -224,26 +163,15 @@
       .featured-grid {
         grid-template-columns: 1fr;
       }
-      .home-tabs {
+      .home-header-tabs {
         gap: 24px;
-        font-size: 24px;
-      }
-      .home-topbar {
-        align-items: flex-start;
+        font-size: 20px;
       }
     }
     @media (max-width: 640px) {
-      .home-brand {
-        width: 100%;
-        font-size: 20px;
-      }
-      .home-tabs {
+      .home-header-tabs {
         font-size: 20px;
         gap: 16px;
-      }
-      .home-user {
-        width: 100%;
-        justify-content: space-between;
       }
       .featured-name {
         font-size: 18px;
@@ -255,48 +183,27 @@
     }
   </style>
 {% endblock %}
+{% block nav_actions %}
+  <div class="home-header-tabs">
+    <a class="is-active" href="{% url 'home' %}">首页</a>
+    <a href="{% url 'stadiums:list' %}">场馆信息</a>
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'accounts:profile' %}">个人中心</a>
+    {% else %}
+      <a href="{% url 'accounts:login' %}">个人中心</a>
+    {% endif %}
+  </div>
+{% endblock %}
 {% block content %}
   <section class="home-shell">
-    <div class="home-topbar">
-      <div class="home-brand">体育场馆预约系统</div>
-      <nav class="home-tabs" aria-label="首页快捷导航">
-        <a class="is-active" href="{% url 'home' %}">首页</a>
-        <a href="{% url 'stadiums:list' %}">场馆信息</a>
-        {% if request.user.is_authenticated %}
-          <a href="{% url 'accounts:profile' %}">个人中心</a>
-        {% else %}
-          <a href="{% url 'accounts:login' %}">个人中心</a>
-        {% endif %}
-      </nav>
-      <div class="home-user">
-        <div class="home-user-text">
-          <div class="home-user-name">
-            {% if request.user.is_authenticated %}
-              {{ request.user.nickname|default:request.user.phone_number }}
-            {% else %}
-              游客
-            {% endif %}
-          </div>
-          <div class="home-user-role">
-            {% if request.user.is_authenticated %}
-              {% if request.user.is_ordinary_user %}普通用户{% elif request.user.is_stadium_admin %}场馆管理员{% elif request.user.is_system_admin %}系统管理员{% endif %}
-            {% else %}
-              未登录
-            {% endif %}
-          </div>
-        </div>
-        <div class="home-avatar" aria-hidden="true"></div>
-      </div>
-    </div>
-
     {% if featured_stadiums %}
       <section class="featured-grid" aria-label="推荐场馆">
         {% for stadium in featured_stadiums %}
           <article class="featured-card">
-            <div class="featured-cover">
-              <div class="featured-cover-sport">
-                {% cycle "篮球馆" "乒乓球馆" "羽毛球馆" %}
-              </div>
+            <div class="featured-cover{% if stadium.cover_image %} has-image{% endif %}">
+              {% if stadium.cover_image %}
+                <img class="featured-cover-image" src="{{ stadium.cover_image.url }}" alt="{{ stadium.name }}预览图">
+              {% endif %}
             </div>
             <a class="featured-name" href="{% url 'stadiums:detail' stadium.pk %}">{{ stadium.name }}</a>
             <div class="featured-meta">

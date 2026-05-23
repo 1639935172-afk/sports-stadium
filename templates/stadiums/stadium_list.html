@@ -1,16 +1,276 @@
-﻿{% extends "base.html" %}
-{% block title %}场馆列表 - 体育场馆预约系统{% endblock %}
+{% extends "base.html" %}
+{% block title %}场馆信息 - 体育场馆预约系统{% endblock %}
+{% block body_class %}stadium-list-page{% endblock %}
+{% block extra_style %}
+  <style>
+    body.stadium-list-page main {
+      max-width: none;
+      padding-top: 0;
+      padding-right: 0;
+      padding-left: 0;
+      padding-bottom: 64px;
+    }
+    .stadium-list-shell {
+      display: grid;
+      gap: 32px;
+    }
+    .stadium-list-hero {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 32px 24px 28px;
+    }
+    .stadium-list-hero-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+    .stadium-list-title {
+      margin: 0;
+      font-size: 34px;
+      font-weight: 900;
+      color: #111827;
+    }
+    .stadium-list-subtitle {
+      margin: 0;
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #4b5563;
+    }
+    .stadium-search {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .stadium-search-field label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #374151;
+    }
+    .stadium-search-field input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0 14px;
+      font: inherit;
+      background: #fff;
+    }
+    .stadium-search .button {
+      min-width: 100px;
+      min-height: 46px;
+      border-radius: 10px;
+    }
+    .stadium-clear-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      min-height: 46px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #fff;
+      color: #374151;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 0 16px;
+    }
+    .stadium-clear-link:hover {
+      text-decoration: none;
+      background: #f8fafc;
+    }
+    .stadium-list-content {
+      max-width: 1040px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 0 24px;
+      display: grid;
+      gap: 24px;
+    }
+    .stadium-list-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .stadium-list-count {
+      margin: 0;
+      font-size: 15px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .stadium-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+    }
+    .stadium-card {
+      overflow: hidden;
+      border: 1px solid #d8dde6;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+    }
+    .stadium-card-cover {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.02)),
+        linear-gradient(180deg, #e5eefb, #d8e4f5 42%, #c5d8ef 100%);
+    }
+    .stadium-card-cover.has-image {
+      background: #dbeafe;
+    }
+    .stadium-card-cover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.55) 0, rgba(255,255,255,0.08) 2px, transparent 2px),
+        linear-gradient(rgba(255,255,255,0.28) 0, rgba(255,255,255,0.08) 2px, transparent 2px);
+      background-size: 52px 100%, 100% 42px;
+      opacity: 0.3;
+    }
+    .stadium-card-cover.has-image::before {
+      opacity: 0;
+    }
+    .stadium-card-cover.has-image::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.02) 10%, rgba(15, 23, 42, 0.44) 100%);
+    }
+    .stadium-card-cover-image {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .stadium-card:nth-child(2n) .stadium-card-cover {
+      background:
+        linear-gradient(135deg, rgba(127, 29, 29, 0.2), rgba(17, 24, 39, 0.06)),
+        linear-gradient(180deg, #f7d7c5, #efb389 55%, #d77b59 100%);
+    }
+    .stadium-card:nth-child(3n) .stadium-card-cover {
+      background:
+        linear-gradient(135deg, rgba(3, 105, 161, 0.2), rgba(15, 23, 42, 0.06)),
+        linear-gradient(180deg, #a9d7d6, #4fb3ab 55%, #2b7f7b 100%);
+    }
+    .stadium-card-body {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+    .stadium-card-name {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.35;
+    }
+    .stadium-card-name a {
+      color: #111827;
+      text-decoration: none;
+    }
+    .stadium-card-name a:hover {
+      color: #1d4ed8;
+      text-decoration: none;
+    }
+    .stadium-card-line {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #4b5563;
+    }
+    .stadium-card-line strong {
+      color: #111827;
+    }
+    .stadium-empty {
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      padding: 28px;
+      color: #6b7280;
+      line-height: 1.7;
+    }
+    @media (max-width: 960px) {
+      .stadium-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 720px) {
+      .stadium-search {
+        grid-template-columns: 1fr;
+      }
+      .stadium-card-grid {
+        grid-template-columns: 1fr;
+      }
+      .stadium-list-hero {
+        padding-top: 24px;
+      }
+      .stadium-list-title {
+        font-size: 28px;
+      }
+    }
+  </style>
+{% endblock %}
 {% block content %}
-  <h1>场馆列表</h1>
-  <form method="get" class="panel" action="{% url 'stadiums:list' %}">
-    <div class="field"><label for="q">搜索场馆名称</label><input id="q" type="search" name="q" value="{{ query }}" placeholder="输入场馆名称"></div>
-    <button class="button" type="submit">搜索</button>{% if query %}<a href="{% url 'stadiums:list' %}">清空搜索</a>{% endif %}
-  </form>
-  {% if stadiums %}
-    <section class="grid" aria-label="公开场馆列表">
-      {% for stadium in stadiums %}
-        <article class="item"><strong><a href="{% url 'stadiums:detail' stadium.pk %}">{{ stadium.name }}</a></strong><span>地址：{{ stadium.address }}</span><br><span>电话：{{ stadium.phone_number }}</span><p>{{ stadium.information|default:"暂无简介"|truncatechars:80 }}</p></article>
-      {% endfor %}
+  <section class="stadium-list-shell">
+    <section class="stadium-list-hero">
+      <div class="stadium-list-hero-inner">
+        <h1 class="stadium-list-title">场馆信息</h1>
+        <p class="stadium-list-subtitle">浏览当前已开放的体育场馆，可按场馆名称或场地下的类型、编号搜索，并进入详情页查看场地、时段和评论信息。</p>
+        <form method="get" class="stadium-search" action="{% url 'stadiums:list' %}">
+          <div class="stadium-search-field">
+            <label for="q">搜索场馆或场地</label>
+            <input id="q" type="search" name="q" value="{{ query }}" placeholder="输入场馆名称、场地类型或编号">
+          </div>
+          <button class="button" type="submit">搜索</button>
+          {% if query %}
+            <a class="stadium-clear-link" href="{% url 'stadiums:list' %}">清空搜索</a>
+          {% endif %}
+        </form>
+      </div>
     </section>
-  {% else %}<p class="empty">当前没有符合条件的场馆。</p>{% endif %}
+
+    <section class="stadium-list-content">
+      <div class="stadium-list-meta">
+        <p class="stadium-list-count">
+          {% if stadiums %}
+            共找到 {{ stadiums|length }} 个开放场馆
+          {% else %}
+            当前没有符合条件的场馆
+          {% endif %}
+        </p>
+      </div>
+
+      {% if stadiums %}
+        <section class="stadium-card-grid" aria-label="公开场馆列表">
+          {% for stadium in stadiums %}
+            <article class="stadium-card">
+              <div class="stadium-card-cover{% if stadium.cover_image %} has-image{% endif %}">
+                {% if stadium.cover_image %}
+                  <img class="stadium-card-cover-image" src="{{ stadium.cover_image.url }}" alt="{{ stadium.name }}缩略图">
+                {% endif %}
+              </div>
+              <div class="stadium-card-body">
+                <h2 class="stadium-card-name"><a href="{% url 'stadiums:detail' stadium.pk %}">{{ stadium.name }}</a></h2>
+                <p class="stadium-card-line"><strong>地址：</strong>{{ stadium.address }}</p>
+                <p class="stadium-card-line"><strong>电话：</strong>{{ stadium.phone_number }}</p>
+                <p class="stadium-card-line"><strong>简介：</strong>{{ stadium.information|default:"暂无简介"|truncatechars:80 }}</p>
+              </div>
+            </article>
+          {% endfor %}
+        </section>
+      {% else %}
+        <div class="stadium-empty">当前没有符合条件的场馆，请调整搜索条件后重试。</div>
+      {% endif %}
+    </section>
+  </section>
 {% endblock %}
