@@ -1,19 +1,30 @@
 ﻿from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from datetime import datetime, timedelta
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import UserRole
 from accounts.permissions import role_required
 
-from .forms import FieldForm, StadiumCoverForm, StadiumForm, TimeSlotForm
+from .forms import BulkTimeSlotGenerationForm, FieldForm, StadiumCoverForm, StadiumForm, TimeSlotForm
 from comments.forms import CommentForm
 from comments.models import CommentAuditStatus
 from reservations.models import Reservation
 
 from .models import Field, Stadium, StadiumAuditStatus, TimeSlot
+
+
+def _slot_start_at(slot):
+    return timezone.make_aware(
+        datetime.combine(slot.date, slot.start_time),
+        timezone.get_current_timezone(),
+    )
 
 
 def _public_stadiums():
@@ -66,10 +77,20 @@ def _build_stadium_detail_context(stadium, user):
     occupied_slot_ids = Reservation.objects.filter(
         status__in=Reservation.occupying_statuses(),
     ).values('time_slot_id')
-    available_slots = TimeSlot.objects.filter(is_available=True).exclude(pk__in=occupied_slot_ids)
+    now = timezone.localtime()
+    available_slots = TimeSlot.objects.filter(is_available=True).exclude(pk__in=occupied_slot_ids).filter(
+        Q(date__gt=now.date()) | Q(date=now.date(), start_time__gt=now.time())
+    )
     fields = stadium.fields.filter(is_active=True).prefetch_related(
         Prefetch('time_slots', queryset=available_slots, to_attr='available_time_slots')
     )
+    for field in fields:
+        slots_by_date = []
+        for slot in field.available_time_slots:
+            if not slots_by_date or slots_by_date[-1]['date'] != slot.date:
+                slots_by_date.append({'date': slot.date, 'slots': []})
+            slots_by_date[-1]['slots'].append(slot)
+        field.available_slots_by_date = slots_by_date
     comments = stadium.comments.filter(audit_status=CommentAuditStatus.APPROVED).select_related('user')
     comment_form = CommentForm() if user.is_authenticated and user.is_ordinary_user else None
     return fields, comments, comment_form
@@ -122,7 +143,15 @@ def _render_my_stadiums_page(
     )
 
 
-def _render_field_list_page(request, stadium, *, form=None, show_edit_modal=False, edit_field=None):
+def _render_field_list_page(
+    request,
+    stadium,
+    *,
+    form=None,
+    show_create_modal=False,
+    show_edit_modal=False,
+    edit_field=None,
+):
     fields = stadium.fields.all()
     if show_edit_modal and edit_field is None:
         edit_field_id = request.GET.get('edit')
@@ -136,6 +165,7 @@ def _render_field_list_page(request, stadium, *, form=None, show_edit_modal=Fals
             'stadium': stadium,
             'fields': fields,
             'field_modal_form': modal_form,
+            'show_create_field_modal': show_create_modal,
             'show_edit_field_modal': show_edit_modal,
             'edit_field': edit_field,
         },
@@ -232,10 +262,16 @@ def stadium_delete_request_cancel_view(request, pk):
 @role_required(UserRole.STADIUM_ADMIN)
 def field_list_view(request, stadium_pk):
     stadium = get_object_or_404(_owned_approved_stadiums(request.user), pk=stadium_pk)
-def field_list_view(request, stadium_pk):
-    stadium = get_object_or_404(_owned_approved_stadiums(request.user), pk=stadium_pk)
-    show_edit_modal = request.GET.get('modal') == 'edit'
-    return _render_field_list_page(request, stadium, show_edit_modal=show_edit_modal)
+    modal = request.GET.get('modal')
+    return _render_field_list_page(
+        request,
+        stadium,
+        show_create_modal=modal == 'create',
+        show_edit_modal=modal == 'edit',
+    )
+
+
+@login_required
 @role_required(UserRole.STADIUM_ADMIN)
 def field_create_view(request, stadium_pk):
     stadium = get_object_or_404(_owned_approved_stadiums(request.user), pk=stadium_pk)
@@ -247,7 +283,7 @@ def field_create_view(request, stadium_pk):
         messages.success(request, '场地已创建')
         return redirect('stadiums:field_list', stadium_pk=stadium.pk)
 
-    return render(request, 'stadiums/field_form.html', {'form': form, 'stadium': stadium, 'title': '添加场地'})
+    return _render_field_list_page(request, stadium, form=form, show_create_modal=True)
 
 
 @login_required
@@ -289,16 +325,41 @@ def field_delete_view(request, pk):
 @role_required(UserRole.STADIUM_ADMIN)
 def time_slot_list_view(request, field_pk):
     field = get_object_or_404(Field, pk=field_pk, stadium__owner=request.user)
-    time_slots = list(field.time_slots.all())
+    selected_date = request.GET.get('date', '').strip()
+    selected_status = request.GET.get('status', '').strip()
+    date_options = list(field.time_slots.order_by('date').values_list('date', flat=True).distinct())
+    time_slots_queryset = field.time_slots.all()
+    if selected_date:
+        time_slots_queryset = time_slots_queryset.filter(date=selected_date)
+    time_slots = list(time_slots_queryset)
     occupied_slot_ids = set(
         Reservation.objects.filter(
             time_slot__field=field,
             status__in=Reservation.occupying_statuses(),
         ).values_list('time_slot_id', flat=True)
     )
+    now = timezone.localtime()
     for slot in time_slots:
-        slot.actual_is_available = slot.is_available and slot.pk not in occupied_slot_ids
-    return render(request, 'stadiums/time_slot_list.html', {'field': field, 'time_slots': time_slots})
+        slot.is_expired = _slot_start_at(slot) <= now
+        slot.is_occupied = slot.pk in occupied_slot_ids
+        slot.actual_is_available = slot.is_available and not slot.is_occupied and not slot.is_expired
+    if selected_status == 'reserved':
+        time_slots = [slot for slot in time_slots if slot.is_occupied]
+    elif selected_status == 'available':
+        time_slots = [slot for slot in time_slots if slot.actual_is_available]
+    elif selected_status == 'expired':
+        time_slots = [slot for slot in time_slots if slot.is_expired]
+    return render(
+        request,
+        'stadiums/time_slot_list.html',
+        {
+            'field': field,
+            'time_slots': time_slots,
+            'date_options': date_options,
+            'selected_date': selected_date,
+            'selected_status': selected_status,
+        },
+    )
 
 
 @login_required
@@ -318,6 +379,76 @@ def time_slot_create_view(request, field_pk):
 
 @login_required
 @role_required(UserRole.STADIUM_ADMIN)
+def time_slot_bulk_generate_view(request, field_pk):
+    field = get_object_or_404(Field, pk=field_pk, stadium__owner=request.user, is_active=True)
+    form = BulkTimeSlotGenerationForm(request.POST or None, initial={'price_per_hour': field.price_per_hour})
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        fields = (
+            list(field.stadium.fields.filter(is_active=True))
+            if data['field_scope'] == 'all'
+            else [field]
+        )
+
+        for target_field in fields:
+            target_field.price_per_hour = data['price_per_hour']
+            target_field.save(update_fields=['price_per_hour', 'updated_at'])
+
+        created_count = 0
+        skipped_count = 0
+        failed_count = 0
+        current_date = data['start_date']
+        while current_date <= data['end_date']:
+            is_weekend = current_date.weekday() >= 5
+            day_start = data['weekend_start_time'] if data['use_weekend_rule'] and is_weekend else data['start_time']
+            day_end = data['weekend_end_time'] if data['use_weekend_rule'] and is_weekend else data['end_time']
+            slot_start = datetime.combine(current_date, day_start)
+            day_end_at = datetime.combine(current_date, day_end)
+
+            while slot_start + timedelta(minutes=data['slot_minutes']) <= day_end_at:
+                slot_end = slot_start + timedelta(minutes=data['slot_minutes'])
+                for target_field in fields:
+                    overlapping_slots = TimeSlot.objects.filter(
+                        field=target_field,
+                        date=current_date,
+                        start_time__lt=slot_end.time(),
+                        end_time__gt=slot_start.time(),
+                    )
+                    if overlapping_slots.exists() and data['skip_existing']:
+                        skipped_count += 1
+                        continue
+
+                    try:
+                        TimeSlot(
+                            field=target_field,
+                            date=current_date,
+                            start_time=slot_start.time(),
+                            end_time=slot_end.time(),
+                            is_available=data['is_available'],
+                        ).save()
+                        created_count += 1
+                    except DjangoValidationError:
+                        failed_count += 1
+                slot_start = slot_end
+            current_date += timedelta(days=1)
+
+        message = f'批量生成完成：新增 {created_count} 个时段'
+        if skipped_count:
+            message += f'，跳过 {skipped_count} 个已有时段'
+        if failed_count:
+            message += f'，失败 {failed_count} 个'
+        messages.success(request, message)
+        return redirect('stadiums:time_slot_list', field_pk=field.pk)
+
+    return render(
+        request,
+        'stadiums/time_slot_bulk_generate.html',
+        {'form': form, 'field': field, 'title': '批量生成时段'},
+    )
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
 def time_slot_edit_view(request, pk):
     time_slot = get_object_or_404(TimeSlot, pk=pk, field__stadium__owner=request.user)
     form = TimeSlotForm(request.POST or None, instance=time_slot)
@@ -327,6 +458,24 @@ def time_slot_edit_view(request, pk):
         return redirect('stadiums:time_slot_list', field_pk=time_slot.field_id)
 
     return render(request, 'stadiums/time_slot_form.html', {'form': form, 'field': time_slot.field, 'title': '修改时段'})
+
+
+@login_required
+@role_required(UserRole.STADIUM_ADMIN)
+@require_POST
+def time_slot_clear_expired_view(request, field_pk):
+    field = get_object_or_404(Field, pk=field_pk, stadium__owner=request.user)
+    now = timezone.localtime()
+    expired_slot_ids = [
+        slot.pk
+        for slot in field.time_slots.all()
+        if _slot_start_at(slot) <= now
+    ]
+    deleted_count = 0
+    if expired_slot_ids:
+        deleted_count, _ = TimeSlot.objects.filter(pk__in=expired_slot_ids).delete()
+    messages.success(request, f'已清除 {deleted_count} 个已过期时段')
+    return redirect('stadiums:time_slot_list', field_pk=field.pk)
 
 
 @login_required
@@ -354,9 +503,9 @@ def audit_approve_view(request, pk):
     stadium = get_object_or_404(Stadium, pk=pk, audit_status=StadiumAuditStatus.PENDING)
     result = stadium.approve()
     if result == 'deleted':
-        messages.success(request, '鍦洪鍒犻櫎鐢宠宸查€氳繃锛屽満棣嗗凡鍒犻櫎')
+        messages.success(request, '场馆删除申请已通过，场馆已删除')
     else:
-        messages.success(request, '鍦洪瀹℃牳宸查€氳繃')
+        messages.success(request, '场馆审核已通过')
     return redirect('stadiums:audit_list')
 
 

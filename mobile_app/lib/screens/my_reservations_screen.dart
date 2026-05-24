@@ -17,6 +17,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   var reservations = <Reservation>[];
   var isLoading = true;
   var cancellingReservationId = 0;
+  var payingReservationId = 0;
   String? errorMessage;
 
   @override
@@ -98,6 +99,28 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     }
   }
 
+  Future<void> _payReservation(Reservation reservation) async {
+    setState(() {
+      payingReservationId = reservation.id;
+    });
+
+    try {
+      await widget.api.pay(reservationId: reservation.id);
+      if (!mounted) return;
+      AppFeedback.showMessage(context, '支付成功，预约已进入待审核。');
+      await _loadReservations();
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedback.showMessage(context, '支付失败，请稍后重试。', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          payingReservationId = 0;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -130,8 +153,16 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                   _ReservationCard(
                     reservation: reservation,
                     isCancelling: cancellingReservationId == reservation.id,
+                    isPaying: payingReservationId == reservation.id,
+                    canPay:
+                        payingReservationId == 0 &&
+                        reservation.status == 'awaiting_payment' &&
+                        !reservation.isExpired,
                     canCancel:
-                        cancellingReservationId == 0 && _canCancel(reservation),
+                        cancellingReservationId == 0 &&
+                        payingReservationId == 0 &&
+                        _canCancel(reservation),
+                    onPay: () => _payReservation(reservation),
                     onCancel: () => _confirmCancel(reservation),
                   ),
                   const SizedBox(height: 12),
@@ -144,7 +175,10 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   }
 
   bool _canCancel(Reservation reservation) {
-    return reservation.status == 'pending' || reservation.status == 'approved';
+    return !reservation.isExpired &&
+        (reservation.status == 'awaiting_payment' ||
+            reservation.status == 'pending' ||
+            reservation.status == 'approved');
   }
 }
 
@@ -152,13 +186,19 @@ class _ReservationCard extends StatelessWidget {
   const _ReservationCard({
     required this.reservation,
     required this.isCancelling,
+    required this.isPaying,
+    required this.canPay,
     required this.canCancel,
+    required this.onPay,
     required this.onCancel,
   });
 
   final Reservation reservation;
   final bool isCancelling;
+  final bool isPaying;
+  final bool canPay;
   final bool canCancel;
+  final VoidCallback onPay;
   final VoidCallback onCancel;
 
   @override
@@ -178,7 +218,10 @@ class _ReservationCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                _StatusBadge(status: reservation.status),
+                _StatusBadge(
+                  status: reservation.status,
+                  isExpired: reservation.isExpired,
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -191,8 +234,30 @@ class _ReservationCard extends StatelessWidget {
               text:
                   '${reservation.date} ${_trimSeconds(reservation.startTime)}-${_trimSeconds(reservation.endTime)}',
             ),
-            if (reservation.status == 'pending' ||
-                reservation.status == 'approved') ...[
+            if (reservation.paymentStatus.isNotEmpty)
+              _IconText(
+                icon: Icons.payments_outlined,
+                text:
+                    '${_paymentStatusLabel(reservation.paymentStatus)} ${reservation.paymentAmount.isEmpty ? '' : '￥${reservation.paymentAmount}'}',
+              ),
+            if (reservation.status == 'awaiting_payment' &&
+                !reservation.isExpired) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: canPay ? onPay : null,
+                  icon: isPaying
+                      ? const AppLoadingIcon()
+                      : const Icon(Icons.payments_outlined),
+                  label: Text(isPaying ? '支付中' : '去支付'),
+                ),
+              ),
+            ],
+            if (!reservation.isExpired &&
+                (reservation.status == 'awaiting_payment' ||
+                    reservation.status == 'pending' ||
+                    reservation.status == 'approved')) ...[
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
@@ -213,18 +278,29 @@ class _ReservationCard extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.status, required this.isExpired});
 
   final String status;
+  final bool isExpired;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    if (isExpired && status != 'cancelled' && status != 'rejected') {
+      return Chip(
+        label: const Text('已过期'),
+        visualDensity: VisualDensity.compact,
+        side: BorderSide(color: colorScheme.outline),
+        labelStyle: TextStyle(color: colorScheme.outline),
+      );
+    }
     final (label, color) = switch (status) {
+      'awaiting_payment' => ('待支付', colorScheme.tertiary),
       'pending' => ('待审核', colorScheme.primary),
       'approved' => ('已通过', Colors.green),
       'rejected' => ('已驳回', colorScheme.error),
       'cancelled' => ('已取消', colorScheme.outline),
+      'payment_failed' => ('支付失败', colorScheme.error),
       _ => (status, colorScheme.outline),
     };
 
@@ -262,4 +338,15 @@ class _IconText extends StatelessWidget {
 String _trimSeconds(String value) {
   if (value.length >= 5) return value.substring(0, 5);
   return value;
+}
+
+String _paymentStatusLabel(String status) {
+  return switch (status) {
+    'unpaid' => '待支付',
+    'paid' => '已支付',
+    'failed' => '支付失败',
+    'closed' => '已关闭',
+    'refunded' => '已退款',
+    _ => status,
+  };
 }

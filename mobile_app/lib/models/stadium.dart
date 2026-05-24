@@ -135,3 +135,23 @@ class TimeSlot {
     );
   }
 }
+
+class TimeSlotBulkGenerateResult {
+  const TimeSlotBulkGenerateResult({
+    required this.createdCount,
+    required this.skippedCount,
+    required this.failedCount,
+  });
+
+  final int createdCount;
+  final int skippedCount;
+  final int failedCount;
+
+  factory TimeSlotBulkGenerateResult.fromJson(Map<String, dynamic> json) {
+    return TimeSlotBulkGenerateResult(
+      createdCount: json['created_count'] as int? ?? 0,
+      skippedCount: json['skipped_count'] as int? ?? 0,
+      failedCount: json['failed_count'] as int? ?? 0,
+    );
+  }
+}

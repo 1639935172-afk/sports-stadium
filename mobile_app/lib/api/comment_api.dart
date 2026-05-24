@@ -6,6 +6,9 @@ class CommentApi {
 
   final ApiClient client;
 
+  /// GET `/stadiums/<id>/comments/`
+  ///
+  /// 场馆详情页展示评论时调用；后端只返回已审核通过的评论。
   Future<List<StadiumComment>> listForStadium(int stadiumId) async {
     final response = await client.dio.get<List<dynamic>>(
       '/stadiums/$stadiumId/comments/',
@@ -16,6 +19,10 @@ class CommentApi {
         .toList();
   }
 
+  /// POST /comments/
+  ///
+  /// 普通用户提交评论。后端根据 JWT 识别用户，评论初始为 pending，
+  /// 需要系统管理员审核后才会出现在公开详情页。
   Future<CommentCreateResult> create({
     required int stadiumId,
     required String content,

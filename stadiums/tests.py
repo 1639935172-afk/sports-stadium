@@ -1,12 +1,14 @@
-from datetime import date, time
+from datetime import date, timedelta, time
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import UserRole
 
@@ -126,6 +128,7 @@ class StadiumWorkflowTests(TestCase):
         stadium.refresh_from_db()
         self.assertEqual(stadium.audit_status, StadiumAuditStatus.APPROVED)
         self.assertTrue(stadium.is_open)
+        self.assertIn('场馆审核已通过', [str(message) for message in get_messages(response.wsgi_request)])
 
     def test_system_admin_can_reject_pending_stadium(self):
         stadium = self.create_pending_stadium()
@@ -192,6 +195,7 @@ class StadiumWorkflowTests(TestCase):
 
         self.assertRedirects(response, reverse('stadiums:audit_list'))
         self.assertFalse(Stadium.objects.filter(pk=stadium.pk).exists())
+        self.assertIn('场馆删除申请已通过，场馆已删除', [str(message) for message in get_messages(response.wsgi_request)])
 
     def test_can_request_deletion_for_legacy_stadium_with_invalid_phone_number(self):
         stadium = self.create_pending_stadium()
@@ -491,6 +495,24 @@ class FieldManagementTests(TestCase):
         self.assertEqual(field.field_type, 'Basketball')
         self.assertTrue(field.is_active)
 
+    def test_stadium_admin_can_create_field_with_custom_field_type(self):
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.post(
+            reverse('stadiums:field_create', args=[self.approved_stadium.pk]),
+            self.field_payload(
+                field_type='__other__',
+                custom_field_type='壁球',
+                number='S1',
+            ),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:field_list', args=[self.approved_stadium.pk]))
+        field = Field.objects.get(stadium=self.approved_stadium)
+        self.assertEqual(field.field_type, '壁球')
+        self.assertEqual(field.number, 'S1')
+
     def test_cannot_create_field_under_unapproved_or_other_stadium(self):
         self.client.force_login(self.stadium_admin)
 
@@ -623,7 +645,7 @@ class TimeSlotManagementTests(TestCase):
 
     def slot_payload(self, **overrides):
         payload = {
-            'date': '2026-05-08',
+            'date': '2026-06-08',
             'start_time': '09:00',
             'end_time': '10:00',
             'is_available': 'on',
@@ -664,7 +686,7 @@ class TimeSlotManagementTests(TestCase):
     def test_overlapping_time_slots_are_rejected_but_adjacent_slots_are_allowed(self):
         TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             end_time=time(11, 0),
         )
@@ -672,14 +694,14 @@ class TimeSlotManagementTests(TestCase):
         with self.assertRaises(ValidationError):
             TimeSlot.objects.create(
                 field=self.field,
-                date=date(2026, 5, 8),
+                date=date(2026, 6, 8),
                 start_time=time(10, 0),
                 end_time=time(12, 0),
             )
 
         adjacent = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(11, 0),
             end_time=time(12, 0),
         )
@@ -689,7 +711,7 @@ class TimeSlotManagementTests(TestCase):
     def test_overlapping_time_slot_form_returns_error(self):
         TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             end_time=time(11, 0),
         )
@@ -708,7 +730,7 @@ class TimeSlotManagementTests(TestCase):
         with self.assertRaises(ValidationError):
             TimeSlot.objects.create(
                 field=self.field,
-                date=date(2026, 5, 8),
+                date=date(2026, 6, 8),
                 start_time=time(11, 0),
                 end_time=time(11, 0),
             )
@@ -720,7 +742,7 @@ class TimeSlotManagementTests(TestCase):
         with self.assertRaises(ValidationError):
             TimeSlot.objects.create(
                 field=self.field,
-                date=date(2026, 5, 8),
+                date=date(2026, 6, 8),
                 start_time=time(9, 0),
                 end_time=time(10, 0),
             )
@@ -747,13 +769,13 @@ class TimeSlotManagementTests(TestCase):
     def test_public_detail_shows_only_available_time_slots(self):
         available = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             end_time=time(10, 0),
         )
         unavailable = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(10, 0),
             end_time=time(11, 0),
             is_available=False,
@@ -765,3 +787,60 @@ class TimeSlotManagementTests(TestCase):
         self.assertContains(response, '09:00-10:00')
         self.assertNotContains(response, '10:00-11:00')
         self.assertFalse(unavailable.is_available)
+
+    def test_bulk_generation_rejects_past_start_date(self):
+        self.client.force_login(self.stadium_admin)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        tomorrow = timezone.localdate() + timedelta(days=1)
+
+        response = self.client.post(
+            reverse('stadiums:time_slot_bulk_generate', args=[self.field.pk]),
+            {
+                'field_scope': 'current',
+                'start_date': yesterday.isoformat(),
+                'end_date': tomorrow.isoformat(),
+                'start_time': '09:00',
+                'end_time': '10:00',
+                'slot_minutes': '60',
+                'price_per_hour': '80.00',
+                'is_available': 'on',
+                'skip_existing': 'on',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '开始日期不能早于今天')
+        self.assertFalse(TimeSlot.objects.filter(date=yesterday).exists())
+
+    def test_stadium_admin_can_clear_only_own_expired_time_slots(self):
+        self.client.force_login(self.stadium_admin)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        expired = TimeSlot.objects.create(
+            field=self.field,
+            date=yesterday,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        future = TimeSlot.objects.create(
+            field=self.field,
+            date=tomorrow,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        other_expired = TimeSlot.objects.create(
+            field=self.other_field,
+            date=yesterday,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+
+        response = self.client.post(
+            reverse('stadiums:time_slot_clear_expired', args=[self.field.pk]),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('stadiums:time_slot_list', args=[self.field.pk]))
+        self.assertFalse(TimeSlot.objects.filter(pk=expired.pk).exists())
+        self.assertTrue(TimeSlot.objects.filter(pk=future.pk).exists())
+        self.assertTrue(TimeSlot.objects.filter(pk=other_expired.pk).exists())

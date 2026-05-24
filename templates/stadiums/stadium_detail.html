@@ -67,6 +67,186 @@
   .stadium-comment-form textarea {
     min-height: 150px;
   }
+  .bookable-field-list {
+    display: grid;
+    gap: 18px;
+  }
+  .bookable-field-card {
+    border: 1px solid #d8dde6;
+    border-radius: 8px;
+    background: #fff;
+    padding: 22px 28px;
+  }
+  .bookable-field-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: start;
+    margin-bottom: 18px;
+  }
+  .bookable-field-title {
+    display: grid;
+    gap: 6px;
+  }
+  .bookable-field-title strong {
+    font-size: 22px;
+  }
+  .bookable-field-title span,
+  .bookable-price {
+    color: #4b5563;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .bookable-date-group {
+    display: grid;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .bookable-date-group[hidden] {
+    display: none !important;
+  }
+  .bookable-date-group + .bookable-date-group {
+    margin-top: 18px;
+  }
+  .bookable-date {
+    font-size: 17px;
+    font-weight: 800;
+    color: #111827;
+  }
+  .bookable-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+    gap: 10px;
+  }
+  .bookable-slot {
+    min-height: 58px;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .bookable-slot-time {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .bookable-slot .button {
+    min-height: 38px;
+    border-radius: 8px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+  .bookable-login {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .bookable-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+  }
+  .bookable-more-button {
+    min-height: 42px;
+    border: 0;
+    border-radius: 8px;
+    background: #d1d5db;
+    color: #111827;
+    padding: 0 18px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .slot-panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(15, 23, 42, 0.42);
+  }
+  .slot-panel-overlay.is-open {
+    display: flex;
+  }
+  .slot-panel {
+    width: min(1120px, 100%);
+    max-height: min(82vh, 860px);
+    overflow: auto;
+    border-radius: 8px;
+    background: #fff;
+    padding: 24px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+  }
+  .slot-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 18px;
+  }
+  .slot-panel-title {
+    display: grid;
+    gap: 6px;
+  }
+  .slot-panel-title strong {
+    font-size: 22px;
+  }
+  .slot-panel-close {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 8px;
+    background: #e5e7eb;
+    color: #111827;
+    font-size: 24px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .slot-panel-filter {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: end;
+    margin-bottom: 18px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f8fafc;
+  }
+  .slot-panel-filter label {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .slot-panel-filter select {
+    min-width: 190px;
+    min-height: 42px;
+    border-radius: 6px;
+  }
+  .slot-panel-filter-button {
+    min-height: 42px;
+    min-width: 88px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .slot-panel-filter-button.is-muted {
+    background: #e5e7eb;
+    color: #111827;
+  }
   .stadium-comment-list {
     display: grid;
     grid-template-columns: 1fr;
@@ -90,6 +270,19 @@
     .stadium-detail-photo-empty {
       min-height: 260px;
       height: 260px;
+    }
+    .bookable-field-card {
+      padding: 18px;
+    }
+    .bookable-slot-grid {
+      grid-template-columns: 1fr;
+    }
+    .slot-panel-overlay {
+      padding: 12px;
+    }
+    .slot-panel {
+      max-height: 88vh;
+      padding: 18px;
     }
   }
   </style>
@@ -125,28 +318,90 @@
 
     <h2>可预约场地</h2>
     {% if fields %}
-      <section class="grid" aria-label="可预约场地列表">
+      <section class="bookable-field-list" aria-label="可预约场地列表">
         {% for field in fields %}
-          <article class="item">
-            <strong>{{ field.number }}</strong>
-            <span>类型：{{ field.field_type }}</span><br>
-            <span>价格：{{ field.price_per_hour }} 元/小时</span>
-            {% if field.available_time_slots %}
-              <div class="actions">
-                {% for slot in field.available_time_slots %}
-                  <span>{{ slot.date|date:"Y-m-d" }} {{ slot.start_time|time:"H:i" }}-{{ slot.end_time|time:"H:i" }}</span>
-                  {% if request.user.is_authenticated and request.user.is_ordinary_user %}
-                    <form method="post" action="{% url 'reservations:create' slot.pk %}">
-                      {% csrf_token %}
-                      <button class="button" type="submit">预约</button>
-                    </form>
-                  {% elif not request.user.is_authenticated %}
-                    <a href="{% url 'accounts:login' %}">登录后预约</a>
-                  {% endif %}
-                {% endfor %}
+          <article class="bookable-field-card">
+            <div class="bookable-field-head">
+              <div class="bookable-field-title">
+                <strong>{{ field.number }}</strong>
+                <span>{{ field.field_type }}</span>
               </div>
+              <div class="bookable-price">{{ field.price_per_hour }} 元/小时</div>
+            </div>
+            {% if field.available_slots_by_date %}
+              {% for group in field.available_slots_by_date %}
+                {% if forloop.counter <= 2 %}
+                <section class="bookable-date-group" aria-label="{{ group.date|date:'Y-m-d' }}可约时段">
+                  <div class="bookable-date">{{ group.date|date:"Y-m-d" }}</div>
+                  <div class="bookable-slot-grid">
+                    {% for slot in group.slots %}
+                      <div class="bookable-slot">
+                        <span class="bookable-slot-time">{{ slot.start_time|time:"H:i" }}-{{ slot.end_time|time:"H:i" }}</span>
+                        {% if request.user.is_authenticated and request.user.is_ordinary_user %}
+                          <form method="post" action="{% url 'reservations:create' slot.pk %}">
+                            {% csrf_token %}
+                            <button class="button" type="submit">预约</button>
+                          </form>
+                        {% elif not request.user.is_authenticated %}
+                          <a class="bookable-login" href="{% url 'accounts:login' %}">登录后预约</a>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </section>
+                {% endif %}
+              {% endfor %}
+              {% if field.available_slots_by_date|length > 2 %}
+                <div class="bookable-more-wrap">
+                  <button class="bookable-more-button" type="button" data-slot-panel-open="slot-panel-{{ field.pk }}">查看全部</button>
+                </div>
+              {% endif %}
             {% else %}
               <p class="hint">暂无可约时段。</p>
+            {% endif %}
+            {% if field.available_slots_by_date %}
+              <div class="slot-panel-overlay" id="slot-panel-{{ field.pk }}" aria-hidden="true">
+                <section class="slot-panel" role="dialog" aria-modal="true" aria-labelledby="slot-panel-title-{{ field.pk }}">
+                  <div class="slot-panel-head">
+                    <div class="slot-panel-title">
+                      <strong id="slot-panel-title-{{ field.pk }}">{{ field.number }} 全部可约时段</strong>
+                      <span>{{ field.field_type }} / {{ field.price_per_hour }} 元/小时</span>
+                    </div>
+                    <button class="slot-panel-close" type="button" data-slot-panel-close aria-label="关闭">×</button>
+                  </div>
+                  <div class="slot-panel-filter">
+                    <label for="slot-panel-date-{{ field.pk }}">筛选日期</label>
+                    <select id="slot-panel-date-{{ field.pk }}" data-slot-date-filter>
+                      <option value="">全部日期</option>
+                      {% for group in field.available_slots_by_date %}
+                        <option value="{{ group.date|date:'Y-m-d' }}">{{ group.date|date:"Y-m-d" }}</option>
+                      {% endfor %}
+                    </select>
+                    <button class="slot-panel-filter-button" type="button" data-slot-date-apply>筛选</button>
+                    <button class="slot-panel-filter-button is-muted" type="button" data-slot-date-reset>重置</button>
+                  </div>
+                  {% for group in field.available_slots_by_date %}
+                    <section class="bookable-date-group" data-slot-date-group="{{ group.date|date:'Y-m-d' }}" aria-label="{{ group.date|date:'Y-m-d' }}可约时段">
+                      <div class="bookable-date">{{ group.date|date:"Y-m-d" }}</div>
+                      <div class="bookable-slot-grid">
+                        {% for slot in group.slots %}
+                          <div class="bookable-slot">
+                            <span class="bookable-slot-time">{{ slot.start_time|time:"H:i" }}-{{ slot.end_time|time:"H:i" }}</span>
+                            {% if request.user.is_authenticated and request.user.is_ordinary_user %}
+                              <form method="post" action="{% url 'reservations:create' slot.pk %}">
+                                {% csrf_token %}
+                                <button class="button" type="submit">预约</button>
+                              </form>
+                            {% elif not request.user.is_authenticated %}
+                              <a class="bookable-login" href="{% url 'accounts:login' %}">登录后预约</a>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </section>
+                  {% endfor %}
+                </section>
+              </div>
             {% endif %}
           </article>
         {% endfor %}
@@ -202,4 +457,61 @@
       <a href="{% url 'stadiums:list' %}">返回场馆列表</a>
     </div>
   </div>
+  <script>
+    document.querySelectorAll('[data-slot-panel-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const panel = document.getElementById(button.dataset.slotPanelOpen);
+        if (panel) {
+          panel.classList.add('is-open');
+          panel.setAttribute('aria-hidden', 'false');
+        }
+      });
+    });
+
+    document.querySelectorAll('.slot-panel-overlay').forEach((overlay) => {
+      const close = () => {
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+      };
+      overlay.querySelectorAll('[data-slot-panel-close]').forEach((button) => {
+        button.addEventListener('click', close);
+      });
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) close();
+      });
+      const dateFilter = overlay.querySelector('[data-slot-date-filter]');
+      const dateApply = overlay.querySelector('[data-slot-date-apply]');
+      const dateReset = overlay.querySelector('[data-slot-date-reset]');
+      const applyDateFilter = () => {
+        const selectedDate = dateFilter ? dateFilter.value : '';
+        overlay.querySelectorAll('[data-slot-date-group]').forEach((group) => {
+          const shouldHide = selectedDate && group.dataset.slotDateGroup !== selectedDate;
+          group.hidden = Boolean(shouldHide);
+          group.style.display = shouldHide ? 'none' : '';
+        });
+      };
+      if (dateFilter) {
+        if (dateApply) {
+          dateApply.addEventListener('click', applyDateFilter);
+        }
+        if (dateReset) {
+          dateReset.addEventListener('click', () => {
+            dateFilter.value = '';
+            applyDateFilter();
+          });
+        }
+        dateFilter.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') applyDateFilter();
+        });
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      document.querySelectorAll('.slot-panel-overlay.is-open').forEach((overlay) => {
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+      });
+    });
+  </script>
 {% endblock %}

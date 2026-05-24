@@ -89,7 +89,10 @@
           {% for reservation in reservations %}
             <tr>
               <td>{{ reservation.time_slot.field.stadium.name }}-{{ reservation.time_slot.field.number }}</td>
-              <td>{{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}</td>
+              <td>
+                {{ reservation.time_slot.date|date:"Y-m-d" }}<br>
+                {{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}
+              </td>
               <td>{{ reservation.user.nickname|default:reservation.user.phone_number }}</td>
               <td>
                 <form class="reservation-action-form" method="post" action="{% url 'reservations:approve' reservation.pk %}">

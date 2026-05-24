@@ -34,6 +34,10 @@ class AuthState extends ChangeNotifier {
 
   bool get isAuthenticated => user != null && accessToken != null;
 
+  /// App 启动时恢复登录态。
+  ///
+  /// 流程：从 SharedPreferences 读取本地 token -> 写入 ApiClient 请求头 ->
+  /// 调用 /profile/ 向后端确认 token 有效；如果后端拒绝，则清空本地登录态。
   Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
     accessToken = prefs.getString(_accessKey);
@@ -60,6 +64,10 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 登录成功后的关键动作：
+  /// 1. 调 AuthApi.login() 获取 JWT；
+  /// 2. 保存 access/refresh token 和用户信息；
+  /// 3. 设置 Authorization 头，让后续 API 请求自动带身份。
   Future<bool> login(
     String phoneNumber,
     String password, {
@@ -204,6 +212,8 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  /// 把登录态持久化到本地。这里保存的是 App 会话数据，
+  /// 真正的权限判断仍然由后端根据 JWT 和用户角色完成。
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     if (accessToken != null) {

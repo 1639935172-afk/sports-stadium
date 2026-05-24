@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+# 统一维护项目里的三种用户角色，供权限判断和页面分流复用。
 class UserRole(models.TextChoices):
     ORDINARY = 'ordinary', _('普通用户')
     STADIUM_ADMIN = 'stadium_admin', _('场馆管理员')
@@ -12,6 +13,7 @@ class UserRole(models.TextChoices):
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
+    # 所有创建用户的入口最终都收敛到这里，统一做手机号和密码处理。
     def _create_user(self, phone_number, password, **extra_fields):
         if not phone_number:
             raise ValueError('手机号不能为空')
@@ -41,6 +43,7 @@ class UserManager(BaseUserManager):
         return self._create_user(phone_number, password, **extra_fields)
 
 
+# 自定义用户模型：改为手机号登录，不再使用 Django 默认的 username。
 class User(AbstractUser):
     username = None
     phone_number = models.CharField('手机号', max_length=20, unique=True)
@@ -48,6 +51,7 @@ class User(AbstractUser):
     role = models.CharField('角色', max_length=20, choices=UserRole.choices, default=UserRole.ORDINARY)
     is_cancelled = models.BooleanField('已注销', default=False)
 
+    # 告诉 Django 认证系统：以后用 phone_number 作为用户名字段。
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
 
@@ -62,6 +66,7 @@ class User(AbstractUser):
 
     @property
     def is_ordinary_user(self):
+        # 方便模板和权限判断直接读取布尔值。
         return self.role == UserRole.ORDINARY
 
     @property
@@ -74,9 +79,11 @@ class User(AbstractUser):
 
     @property
     def can_login(self):
+        # 账号既要处于启用状态，也不能已经被注销。
         return self.is_active and not self.is_cancelled
 
     def cancel_account(self):
+        # 逻辑注销：保留用户数据，但阻止后续登录。
         self.is_active = False
         self.is_cancelled = True
         self.save(update_fields=['is_active', 'is_cancelled'])

@@ -6,6 +6,10 @@ class SystemUserApi {
 
   final ApiClient client;
 
+  /// GET /system/users/?q=...
+  ///
+  /// 系统管理员用户管理列表使用。是否有权限由后端 IsSystemAdmin 判断，
+  /// App 端只是根据角色显示入口，真正的安全边界在 Django API。
   Future<List<AppUser>> list({String query = ''}) async {
     final response = await client.dio.get<List<dynamic>>(
       '/system/users/',

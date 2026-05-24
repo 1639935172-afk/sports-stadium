@@ -69,12 +69,15 @@ class _TimeSlotFormScreenState extends State<TimeSlotFormScreen> {
   }
 
   Future<void> _pickDate() async {
-    final initial =
-        DateTime.tryParse(_dateController.text.trim()) ?? DateTime.now();
+    final today = DateTime.now();
+    final firstDate = _isEditing
+        ? DateTime(2024)
+        : DateTime(today.year, today.month, today.day);
+    final initial = DateTime.tryParse(_dateController.text.trim()) ?? firstDate;
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime(2024),
+      initialDate: initial.isBefore(firstDate) ? firstDate : initial,
+      firstDate: firstDate,
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
@@ -127,6 +130,11 @@ class _TimeSlotFormScreenState extends State<TimeSlotFormScreen> {
                         if (text.isEmpty) return '请输入日期';
                         final parsed = DateTime.tryParse(text);
                         if (parsed == null) return '请输入合法日期';
+                        if (!_isEditing) {
+                          final now = DateTime.now();
+                          final today = DateTime(now.year, now.month, now.day);
+                          if (parsed.isBefore(today)) return '日期不能早于今天';
+                        }
                         return null;
                       },
                     ),

@@ -18,6 +18,10 @@ class AuthApi {
 
   final ApiClient client;
 
+  /// POST /auth/login/
+  ///
+  /// 后端校验手机号和密码，返回 access/refresh token 以及当前用户信息。
+  /// AuthState 会保存 token，并调用 ApiClient.setAccessToken() 让后续请求带认证头。
   Future<LoginResult> login({
     required String phoneNumber,
     required String password,
@@ -34,6 +38,9 @@ class AuthApi {
     );
   }
 
+  /// POST /auth/register/
+  ///
+  /// 注册接口只负责创建账号；注册成功后页面再引导用户登录。
   Future<AppUser> register({
     required String phoneNumber,
     required String nickname,
@@ -55,6 +62,9 @@ class AuthApi {
     return AppUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  /// GET /profile/
+  ///
+  /// 用于启动时校验本地 token 是否仍然有效，也用于个人资料页刷新用户信息。
   Future<AppUser> profile() async {
     final response = await client.dio.get<Map<String, dynamic>>('/profile/');
     return AppUser.fromJson(response.data ?? <String, dynamic>{});

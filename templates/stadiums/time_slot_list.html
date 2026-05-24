@@ -11,6 +11,68 @@
   .slot-table-wrap {
     overflow-x: auto;
   }
+  .slot-toolbar {
+    max-width: 1080px;
+    display: flex;
+    align-items: end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 0 0 22px;
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+  .slot-filter-form {
+    display: flex;
+    align-items: end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .slot-filter-field {
+    display: grid;
+    gap: 8px;
+    min-width: 180px;
+  }
+  .slot-filter-field label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .slot-filter-field select {
+    min-height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 16px;
+  }
+  .slot-filter-button {
+    min-height: 42px;
+    min-width: 96px;
+    border: 0;
+    border-radius: 8px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .slot-filter-button.is-muted {
+    background: #d1d5db;
+  }
+  .slot-filter-actions {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
   .slot-table {
     width: 100%;
     max-width: 1080px;
@@ -69,20 +131,23 @@
   .slot-status.is-closed {
     color: #b91c1c;
   }
+  .slot-status.is-expired {
+    color: #6b7280;
+  }
   .slot-add-wrap {
-    max-width: 1080px;
     display: flex;
-    justify-content: center;
-    margin-top: 26px;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   .slot-add-button {
-    width: min(100%, 340px);
-    min-height: 62px;
+    min-width: 156px;
+    min-height: 42px;
+    padding: 0 18px;
     border: 0;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #d9d9d9;
     color: #111827;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     text-decoration: none;
     display: inline-flex;
@@ -92,6 +157,9 @@
   .slot-add-button:hover {
     text-decoration: none;
     background: #d4d4d8;
+  }
+  .slot-clear-form {
+    display: inline-flex;
   }
   .slot-empty {
     max-width: 1080px;
@@ -113,9 +181,65 @@
     min-height: 42px;
     font-size: 16px;
   }
+  .slot-filter-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .slot-add-wrap {
+    width: 100%;
+  }
+  .slot-add-button {
+    flex: 1 1 180px;
+  }
 {% endblock %}
 {% block stadium_admin_content %}
   <p class="slot-meta">{{ field.stadium.name }} / {{ field.field_type }}</p>
+  <div class="slot-toolbar">
+    <form class="slot-filter-form" method="get">
+      <div class="slot-filter-field">
+        <label for="slot-date-filter">筛选日期</label>
+        <select id="slot-date-filter" name="date">
+          <option value="">全部日期</option>
+          {% for date_option in date_options %}
+            <option value="{{ date_option|date:'Y-m-d' }}"{% if selected_date == date_option|date:'Y-m-d' %} selected{% endif %}>
+              {{ date_option|date:"Y-m-d" }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="slot-filter-field">
+        <label for="slot-status-filter">预约状态</label>
+        <select id="slot-status-filter" name="status">
+          <option value="">全部状态</option>
+          <option value="available"{% if selected_status == 'available' %} selected{% endif %}>未预约</option>
+          <option value="reserved"{% if selected_status == 'reserved' %} selected{% endif %}>已预约</option>
+          <option value="expired"{% if selected_status == 'expired' %} selected{% endif %}>已过期</option>
+        </select>
+      </div>
+      <button class="slot-filter-button" type="submit">筛选</button>
+      <a class="slot-filter-button is-muted" href="{% url 'stadiums:time_slot_list' field.pk %}">重置</a>
+    </form>
+    <div class="slot-filter-actions">
+      <div class="slot-add-wrap">
+        {% if field.is_active %}
+          <a class="slot-add-button" href="{% url 'stadiums:time_slot_create' field.pk %}">添加时段信息</a>
+          <a class="slot-add-button" href="{% url 'stadiums:time_slot_bulk_generate' field.pk %}">批量生成时段</a>
+        {% else %}
+          <span class="slot-add-button">场地已停用，无法新增时段</span>
+        {% endif %}
+        <form class="slot-clear-form" method="post" action="{% url 'stadiums:time_slot_clear_expired' field.pk %}">
+          {% csrf_token %}
+          <button
+            class="slot-add-button"
+            type="submit"
+            onclick="return confirm('确认清除当前场地所有已过期时段吗？该操作不可撤销。');"
+          >
+            清除已过期时段
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
   {% if time_slots %}
     <div class="slot-table-wrap">
       <table class="slot-table" aria-label="开放时段列表">
@@ -136,7 +260,11 @@
               <td>{{ slot.start_time|time:"H:i" }}</td>
               <td>{{ slot.end_time|time:"H:i" }}</td>
               <td>
-                {% if slot.actual_is_available %}
+                {% if slot.is_expired %}
+                  <span class="slot-status is-expired">已过期</span>
+                {% elif slot.is_occupied %}
+                  <span class="slot-status is-closed">已预约</span>
+                {% elif slot.actual_is_available %}
                   <span class="slot-status is-open">可预约</span>
                 {% else %}
                   <span class="slot-status is-closed">不可预约</span>
@@ -165,11 +293,4 @@
   {% else %}
     <div class="slot-empty">当前还没有开放时段，请先添加时段信息。</div>
   {% endif %}
-  <div class="slot-add-wrap">
-    {% if field.is_active %}
-      <a class="slot-add-button" href="{% url 'stadiums:time_slot_create' field.pk %}">添加时段信息</a>
-    {% else %}
-      <span class="slot-add-button">场地已停用，无法新增时段</span>
-    {% endif %}
-  </div>
 {% endblock %}

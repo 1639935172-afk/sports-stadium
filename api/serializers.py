@@ -1,6 +1,8 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -184,6 +186,7 @@ class LoginSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         user = instance['user']
+        # App 登录后需要这两个 token：access 放请求头，refresh 预留给续期。
         refresh = RefreshToken.for_user(user)
         return {
             'refresh': str(refresh),
@@ -237,6 +240,30 @@ class TimeSlotManageSerializer(ApiValidationMixin, serializers.ModelSerializer):
         return instance
 
 
+class TimeSlotBulkGenerateSerializer(serializers.Serializer):
+    field_scope = serializers.ChoiceField(choices=['current', 'all'], default='current')
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    start_time = serializers.TimeField()
+    end_time = serializers.TimeField()
+    slot_minutes = serializers.IntegerField(min_value=15, max_value=240)
+    price_per_hour = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0)
+    is_available = serializers.BooleanField(default=True)
+    skip_existing = serializers.BooleanField(default=True)
+
+    def validate_start_date(self, value):
+        if value < timezone.localdate():
+            raise serializers.ValidationError('开始日期不能早于今天')
+        return value
+
+    def validate(self, attrs):
+        if attrs['start_date'] > attrs['end_date']:
+            raise serializers.ValidationError({'end_date': '结束日期不能早于开始日期'})
+        if attrs['start_time'] >= attrs['end_time']:
+            raise serializers.ValidationError({'end_time': '每日结束时间必须晚于开始时间'})
+        return attrs
+
+
 class FieldSerializer(serializers.ModelSerializer):
     time_slots = serializers.SerializerMethodField()
 
@@ -246,8 +273,13 @@ class FieldSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_time_slots(self, obj):
+        # 场馆详情 API 在这里过滤掉不可用、已占用、已过期的时段，
+        # 所以 App 端展示的 time_slots 默认就是可预约时段。
         occupied_slot_ids = self.context.get('occupied_slot_ids', set())
+        now = self.context.get('now')
         slots = obj.time_slots.filter(is_available=True).exclude(id__in=occupied_slot_ids)
+        if now is not None:
+            slots = slots.filter(Q(date__gt=now.date()) | Q(date=now.date(), start_time__gt=now.time()))
         return TimeSlotSerializer(slots, many=True).data
 
 
@@ -354,26 +386,55 @@ class ReservationSerializer(serializers.ModelSerializer):
     date = serializers.DateField(source='time_slot.date', read_only=True)
     start_time = serializers.TimeField(source='time_slot.start_time', read_only=True)
     end_time = serializers.TimeField(source='time_slot.end_time', read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+    payment_status = serializers.SerializerMethodField()
+    payment_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Reservation
         fields = [
             'id', 'time_slot', 'status', 'stadium_name', 'field_number', 'field_type',
-            'date', 'start_time', 'end_time', 'created_at', 'updated_at',
+            'date', 'start_time', 'end_time', 'is_expired', 'payment_status',
+            'payment_amount', 'created_at', 'updated_at',
         ]
         read_only_fields = fields
 
+    def get_payment_status(self, obj):
+        if not hasattr(obj, 'payment'):
+            return ''
+        return obj.payment.status
+
+    def get_payment_amount(self, obj):
+        if not hasattr(obj, 'payment'):
+            return ''
+        return str(obj.payment.amount)
+
 
 class ReservationCreateSerializer(ApiValidationMixin, serializers.ModelSerializer):
+    payment_status = serializers.SerializerMethodField()
+    payment_amount = serializers.SerializerMethodField()
+
     class Meta:
         model = Reservation
-        fields = ['id', 'time_slot', 'status', 'created_at']
-        read_only_fields = ['id', 'status', 'created_at']
+        fields = ['id', 'time_slot', 'status', 'payment_status', 'payment_amount', 'created_at']
+        read_only_fields = ['id', 'status', 'payment_status', 'payment_amount', 'created_at']
+
+    def get_payment_status(self, obj):
+        if not hasattr(obj, 'payment'):
+            return ''
+        return obj.payment.status
+
+    def get_payment_amount(self, obj):
+        if not hasattr(obj, 'payment'):
+            return ''
+        return str(obj.payment.amount)
 
     def create(self, validated_data):
+        # App 只提交 time_slot；用户来自 request.user，支付单由 ensure_payment() 自动生成。
         reservation = Reservation(user=self.context['request'].user, **validated_data)
         try:
             reservation.save()
+            reservation.ensure_payment()
         except DjangoValidationError as exc:
             self._raise_serializer_error(exc)
         return reservation

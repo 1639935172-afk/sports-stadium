@@ -67,6 +67,13 @@
   .reservation-table td form {
     margin-top: 10px;
   }
+  .reservation-actions {
+    display: grid;
+    gap: 8px;
+  }
+  .reservation-actions form {
+    margin: 0;
+  }
   .reservation-table .button {
     min-height: 38px;
     padding: 0 12px;
@@ -105,6 +112,7 @@
             <th>场地名称</th>
             <th>预约时间</th>
             <th>审核状态</th>
+            <th>支付状态</th>
           </tr>
         </thead>
         <tbody>
@@ -118,25 +126,49 @@
                   {{ reservation.time_slot.start_time|time:"H:i" }}-{{ reservation.time_slot.end_time|time:"H:i" }}
                 </td>
                 <td>
-                  {{ reservation.get_status_display }}
-                  {% if reservation.status == "pending" or reservation.status == "approved" %}
-                    <form method="post" action="{% url 'reservations:cancel' reservation.pk %}">
-                      {% csrf_token %}
-                      <button class="button button-danger" type="submit">取消预约</button>
-                    </form>
+                  {% if reservation.is_expired and reservation.status != "cancelled" and reservation.status != "rejected" %}
+                    已过期
+                  {% else %}
+                    {{ reservation.get_status_display }}
                   {% endif %}
+                </td>
+                <td>
+                  {% if reservation.payment %}
+                    {{ reservation.payment.get_status_display }}<br>
+                    ￥{{ reservation.payment.amount }}
+                  {% else %}
+                    未生成
+                  {% endif %}
+                  <div class="reservation-actions">
+                    {% if reservation.status == "awaiting_payment" and not reservation.is_expired %}
+                      <form method="post" action="{% url 'reservations:pay' reservation.pk %}">
+                        {% csrf_token %}
+                        <button class="button" type="submit">去支付</button>
+                      </form>
+                      <form method="post" action="{% url 'reservations:payment_fail' reservation.pk %}">
+                        {% csrf_token %}
+                        <button class="button button-danger" type="submit">模拟失败</button>
+                      </form>
+                    {% endif %}
+                    {% if not reservation.is_expired and reservation.status == "awaiting_payment" or not reservation.is_expired and reservation.status == "pending" or not reservation.is_expired and reservation.status == "approved" %}
+                      <form method="post" action="{% url 'reservations:cancel' reservation.pk %}">
+                        {% csrf_token %}
+                        <button class="button button-danger" type="submit">取消预约</button>
+                      </form>
+                    {% endif %}
+                  </div>
                 </td>
               </tr>
             {% endfor %}
           {% else %}
             <tr class="reservation-empty-row">
-              <td colspan="4">你还没有预约。</td>
+              <td colspan="5">你还没有预约。</td>
             </tr>
             <tr class="reservation-empty-row">
-              <td></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td>
             </tr>
             <tr class="reservation-empty-row">
-              <td></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td>
             </tr>
           {% endif %}
         </tbody>

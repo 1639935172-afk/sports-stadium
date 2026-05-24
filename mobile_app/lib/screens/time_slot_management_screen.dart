@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../api/stadium_api.dart';
 import '../models/stadium.dart';
+import 'time_slot_bulk_generate_screen.dart';
 import 'time_slot_form_screen.dart';
 
 class TimeSlotManagementScreen extends StatefulWidget {
@@ -80,6 +81,84 @@ class _TimeSlotManagementScreenState extends State<TimeSlotManagementScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_readError(error, '创建时段失败。'))));
+    }
+  }
+
+  Future<void> _bulkGenerateTimeSlots() async {
+    final formValue = await Navigator.of(context)
+        .push<TimeSlotBulkGenerateValue>(
+          MaterialPageRoute<TimeSlotBulkGenerateValue>(
+            builder: (_) => TimeSlotBulkGenerateScreen(field: widget.field),
+          ),
+        );
+    if (formValue == null) return;
+
+    try {
+      final result = await widget.api.bulkGenerateTimeSlots(
+        fieldId: widget.field.id,
+        fieldScope: formValue.fieldScope,
+        startDate: formValue.startDate,
+        endDate: formValue.endDate,
+        startTime: formValue.startTime,
+        endTime: formValue.endTime,
+        slotMinutes: formValue.slotMinutes,
+        pricePerHour: formValue.pricePerHour,
+        isAvailable: formValue.isAvailable,
+        skipExisting: formValue.skipExisting,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '批量生成完成：新增 ${result.createdCount} 个，跳过 ${result.skippedCount} 个，失败 ${result.failedCount} 个。',
+          ),
+        ),
+      );
+      await _loadTimeSlots();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_readError(error, '批量生成时段失败。'))));
+    }
+  }
+
+  Future<void> _clearExpiredTimeSlots() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('清除已过期时段'),
+          content: const Text('确认清除当前场地所有已过期时段吗？该操作不可撤销。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('确认清除'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    try {
+      final deletedCount = await widget.api.clearExpiredTimeSlots(
+        fieldId: widget.field.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已清除 $deletedCount 个已过期时段。')));
+      await _loadTimeSlots();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_readError(error, '清除已过期时段失败。'))));
     }
   }
 
@@ -174,17 +253,19 @@ class _TimeSlotManagementScreenState extends State<TimeSlotManagementScreen> {
     final title = '${widget.field.fieldType} ${widget.field.number}'.trim();
     return Scaffold(
       appBar: AppBar(centerTitle: true, title: Text('$title - 时段管理')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: widget.field.isActive ? _createTimeSlot : null,
-        icon: const Icon(Icons.add_alarm_outlined),
-        label: const Text('新增时段'),
-      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadTimeSlots,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
+              _TimeSlotToolbar(
+                canCreate: widget.field.isActive,
+                onCreate: _createTimeSlot,
+                onBulkGenerate: _bulkGenerateTimeSlots,
+                onClearExpired: _clearExpiredTimeSlots,
+              ),
+              const SizedBox(height: 12),
               if (!widget.field.isActive) ...[
                 const Card(
                   child: Padding(
@@ -230,6 +311,50 @@ class _TimeSlotManagementScreenState extends State<TimeSlotManagementScreen> {
                 ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeSlotToolbar extends StatelessWidget {
+  const _TimeSlotToolbar({
+    required this.canCreate,
+    required this.onCreate,
+    required this.onBulkGenerate,
+    required this.onClearExpired,
+  });
+
+  final bool canCreate;
+  final VoidCallback onCreate;
+  final VoidCallback onBulkGenerate;
+  final VoidCallback onClearExpired;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: canCreate ? onCreate : null,
+              icon: const Icon(Icons.add_alarm_outlined),
+              label: const Text('新增时段'),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: canCreate ? onBulkGenerate : null,
+              icon: const Icon(Icons.auto_awesome_motion_outlined),
+              label: const Text('批量生成'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onClearExpired,
+              icon: const Icon(Icons.cleaning_services_outlined),
+              label: const Text('清除过期'),
+            ),
+          ],
         ),
       ),
     );

@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime, timedelta
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -29,6 +31,7 @@ from .serializers import (
     StadiumListSerializer,
     StadiumManageSerializer,
     TimeSlotManageSerializer,
+    TimeSlotBulkGenerateSerializer,
     SystemUserUpdateSerializer,
     UserSerializer,
 )
@@ -56,6 +59,7 @@ class IsStadiumAdmin(permissions.BasePermission):
 
 
 def public_stadiums():
+    # 公开接口统一从这里取场馆，避免 App 看到未审核、未开放或待删除的场馆。
     return Stadium.objects.filter(
         audit_status=StadiumAuditStatus.APPROVED,
         is_open=True,
@@ -100,6 +104,13 @@ def owned_time_slots(user):
     ).select_related('field', 'field__stadium')
 
 
+def slot_start_at(slot):
+    return timezone.make_aware(
+        datetime.combine(slot.date, slot.start_time),
+        timezone.get_current_timezone(),
+    )
+
+
 def serializer_error(exc):
     if hasattr(exc, 'message_dict'):
         return exc.message_dict
@@ -123,6 +134,7 @@ class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        # 登录成功后 LoginSerializer 会生成 SimpleJWT access/refresh token。
         serializer = LoginSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
@@ -330,6 +342,83 @@ class TimeSlotManageDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class TimeSlotBulkGenerateView(APIView):
+    permission_classes = [IsStadiumAdmin]
+
+    def post(self, request, field_pk):
+        field = get_object_or_404(owned_active_fields(request.user), pk=field_pk)
+        serializer = TimeSlotBulkGenerateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target_fields = (
+            list(field.stadium.fields.filter(is_active=True))
+            if data['field_scope'] == 'all'
+            else [field]
+        )
+
+        for target_field in target_fields:
+            target_field.price_per_hour = data['price_per_hour']
+            target_field.save(update_fields=['price_per_hour', 'updated_at'])
+
+        created_count = 0
+        skipped_count = 0
+        failed_count = 0
+        current_date = data['start_date']
+        while current_date <= data['end_date']:
+            slot_start = datetime.combine(current_date, data['start_time'])
+            day_end_at = datetime.combine(current_date, data['end_time'])
+            while slot_start + timedelta(minutes=data['slot_minutes']) <= day_end_at:
+                slot_end = slot_start + timedelta(minutes=data['slot_minutes'])
+                for target_field in target_fields:
+                    overlapping_slots = TimeSlot.objects.filter(
+                        field=target_field,
+                        date=current_date,
+                        start_time__lt=slot_end.time(),
+                        end_time__gt=slot_start.time(),
+                    )
+                    if overlapping_slots.exists() and data['skip_existing']:
+                        skipped_count += 1
+                        continue
+                    try:
+                        TimeSlot(
+                            field=target_field,
+                            date=current_date,
+                            start_time=slot_start.time(),
+                            end_time=slot_end.time(),
+                            is_available=data['is_available'],
+                        ).save()
+                        created_count += 1
+                    except DjangoValidationError:
+                        failed_count += 1
+                slot_start = slot_end
+            current_date += timedelta(days=1)
+
+        return Response(
+            {
+                'created_count': created_count,
+                'skipped_count': skipped_count,
+                'failed_count': failed_count,
+            }
+        )
+
+
+class TimeSlotClearExpiredView(APIView):
+    permission_classes = [IsStadiumAdmin]
+
+    def post(self, request, field_pk):
+        field = get_object_or_404(owned_fields(request.user), pk=field_pk)
+        now = timezone.localtime()
+        expired_slot_ids = [
+            slot.pk
+            for slot in field.time_slots.all()
+            if slot_start_at(slot) <= now
+        ]
+        deleted_count = 0
+        if expired_slot_ids:
+            deleted_count, _ = TimeSlot.objects.filter(pk__in=expired_slot_ids).delete()
+        return Response({'deleted_count': deleted_count})
+
+
 class StadiumDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = StadiumDetailSerializer
@@ -339,10 +428,13 @@ class StadiumDetailView(generics.RetrieveAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
+        # 序列化场馆详情时，把已占用时段和当前时间传给 Serializer，
+        # 让 App 端只拿到“真正还能预约”的时段。
         occupied_slot_ids = Reservation.objects.filter(
             status__in=Reservation.occupying_statuses(),
         ).values_list('time_slot_id', flat=True)
         context['occupied_slot_ids'] = set(occupied_slot_ids)
+        context['now'] = timezone.localtime()
         return context
 
 
@@ -388,6 +480,7 @@ class ReservationCreateView(generics.CreateAPIView):
     serializer_class = ReservationCreateSerializer
 
     def get_serializer_context(self):
+        # Serializer 创建预约时需要 request.user；App 不传 user id，防止伪造身份。
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
@@ -398,13 +491,21 @@ class MyReservationsView(generics.ListAPIView):
     serializer_class = ReservationSerializer
 
     def get_queryset(self):
-        return Reservation.objects.filter(user=self.request.user).select_related('time_slot__field__stadium')
+        return Reservation.objects.filter(user=self.request.user).select_related('time_slot__field__stadium', 'payment')
 
 
 def admin_reservations(user):
     return Reservation.objects.filter(
         time_slot__field__stadium__owner=user,
-    ).select_related('user', 'time_slot__field__stadium')
+    ).select_related('user', 'time_slot__field__stadium', 'payment')
+
+
+def future_reservation_slot_filter():
+    now = timezone.localtime()
+    return Q(time_slot__date__gt=now.date()) | Q(
+        time_slot__date=now.date(),
+        time_slot__start_time__gt=now.time(),
+    )
 
 
 class AdminPendingReservationsView(generics.ListAPIView):
@@ -414,6 +515,8 @@ class AdminPendingReservationsView(generics.ListAPIView):
     def get_queryset(self):
         return admin_reservations(self.request.user).filter(
             status=ReservationStatus.PENDING,
+        ).filter(
+            future_reservation_slot_filter(),
         ).order_by('created_at')
 
 
@@ -423,6 +526,7 @@ class ReservationApproveView(APIView):
     def post(self, request, pk):
         reservation = get_object_or_404(
             admin_reservations(request.user),
+            future_reservation_slot_filter(),
             pk=pk,
             status=ReservationStatus.PENDING,
         )
@@ -439,6 +543,7 @@ class ReservationRejectView(APIView):
     def post(self, request, pk):
         reservation = get_object_or_404(
             admin_reservations(request.user),
+            future_reservation_slot_filter(),
             pk=pk,
             status=ReservationStatus.PENDING,
         )
@@ -458,11 +563,39 @@ class ReservationCancelView(APIView):
         return Response(ReservationSerializer(reservation).data)
 
 
+class ReservationPayView(APIView):
+    permission_classes = [IsOrdinaryUser]
+
+    def post(self, request, pk):
+        # 模拟支付成功：后端负责把 Payment 和 Reservation 状态一起推进。
+        reservation = get_object_or_404(Reservation.objects.select_related('payment'), pk=pk, user=request.user)
+        try:
+            reservation.mark_payment_paid()
+        except DjangoValidationError as exc:
+            return Response({'detail': serializer_error(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        reservation.refresh_from_db()
+        return Response(ReservationSerializer(reservation).data)
+
+
+class ReservationPaymentFailView(APIView):
+    permission_classes = [IsOrdinaryUser]
+
+    def post(self, request, pk):
+        reservation = get_object_or_404(Reservation.objects.select_related('payment'), pk=pk, user=request.user)
+        try:
+            reservation.mark_payment_failed()
+        except DjangoValidationError as exc:
+            return Response({'detail': serializer_error(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        reservation.refresh_from_db()
+        return Response(ReservationSerializer(reservation).data)
+
+
 class CommentCreateView(generics.CreateAPIView):
     permission_classes = [IsOrdinaryUser]
     serializer_class = CommentCreateSerializer
 
     def get_serializer_context(self):
+        # 评论创建同样由后端从 JWT 取当前用户，App 只传 stadium 和 content。
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
