@@ -32,6 +32,8 @@ class ReservationApi {
         .toList();
   }
 
+  /// 场馆管理员审核列表。后端仅返回当前管理员所管辖场馆的预约，
+  /// 并排除已过期的待审核项。
   Future<List<Reservation>> adminPending() async {
     final response = await client.dio.get<List<dynamic>>(
       '/reservations/admin/pending/',
@@ -42,6 +44,7 @@ class ReservationApi {
         .toList();
   }
 
+  /// 普通用户只能取消自己的有效预约；Django 会拒绝其他用户的预约和已过期的预约。
   Future<Reservation> cancel({required int reservationId}) async {
     final response = await client.dio.post<Map<String, dynamic>>(
       '/reservations/$reservationId/cancel/',
@@ -60,6 +63,7 @@ class ReservationApi {
     return Reservation.fromJson(response.data ?? <String, dynamic>{});
   }
 
+  /// 仅用于演示的失败分支：将支付标记为失败，并使其不进入场馆管理员审核队列。
   Future<Reservation> paymentFail({required int reservationId}) async {
     final response = await client.dio.post<Map<String, dynamic>>(
       '/reservations/$reservationId/payment-fail/',
@@ -67,6 +71,7 @@ class ReservationApi {
     return Reservation.fromJson(response.data ?? <String, dynamic>{});
   }
 
+  /// 场馆管理员通过审核。Django 会重新检查所有权和预约冲突。
   Future<Reservation> approve({required int reservationId}) async {
     final response = await client.dio.post<Map<String, dynamic>>(
       '/reservations/$reservationId/approve/',

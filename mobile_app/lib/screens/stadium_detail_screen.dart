@@ -203,6 +203,10 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
                   ),
                 )
               else if (stadium != null) ...[
+                if (stadium!.coverImageUrl.trim().isNotEmpty) ...[
+                  _StadiumDetailCoverImage(imageUrl: stadium!.coverImageUrl),
+                  const SizedBox(height: 16),
+                ],
                 _StadiumInfoCard(stadium: stadium!),
                 const SizedBox(height: 16),
                 Text(
@@ -356,6 +360,33 @@ String _formatDateTime(String value) {
   final normalized = value.replaceFirst('T', ' ');
   if (normalized.length >= 16) return normalized.substring(0, 16);
   return normalized;
+}
+
+class _StadiumDetailCoverImage extends StatelessWidget {
+  const _StadiumDetailCoverImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: const Color(0xFFE5E7EB),
+              alignment: Alignment.center,
+              child: const Icon(Icons.image_not_supported_outlined, size: 40),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _StadiumInfoCard extends StatelessWidget {

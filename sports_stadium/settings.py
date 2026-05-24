@@ -97,6 +97,11 @@ WSGI_APPLICATION = 'sports_stadium.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# Key defense point: Django is the only layer that talks to the database.
+# The Flutter app calls Django REST APIs; it never connects to MySQL/SQLite
+# directly. Local development can fall back to SQLite, while the course-demo
+# environment can switch to MySQL through .env.
 
 if os.getenv('DB_ENGINE', 'sqlite').lower() == 'mysql':
     DATABASES = {

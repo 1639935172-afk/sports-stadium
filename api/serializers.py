@@ -300,14 +300,38 @@ class FieldManageSerializer(ApiValidationMixin, serializers.ModelSerializer):
         read_only_fields = ['id', 'stadium', 'stadium_name']
 
 
-class StadiumListSerializer(serializers.ModelSerializer):
+class StadiumCoverImageSerializerMixin:
+    def get_cover_image_url(self, obj):
+        if not obj.cover_image:
+            return ''
+        url = obj.cover_image.url
+        request = self.context.get('request')
+        if request is None:
+            return url
+        return request.build_absolute_uri(url)
+
+
+class StadiumListSerializer(StadiumCoverImageSerializerMixin, serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Stadium
-        fields = ['id', 'name', 'address', 'phone_number', 'information']
+        fields = [
+            'id',
+            'name',
+            'address',
+            'phone_number',
+            'information',
+            'cover_image_url',
+            'audit_status',
+            'is_open',
+            'deletion_requested',
+        ]
         read_only_fields = fields
 
 
-class StadiumAuditSerializer(serializers.ModelSerializer):
+class StadiumAuditSerializer(StadiumCoverImageSerializerMixin, serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
     owner_nickname = serializers.CharField(source='owner.nickname', read_only=True)
     owner_phone_number = serializers.CharField(source='owner.phone_number', read_only=True)
 
@@ -319,6 +343,7 @@ class StadiumAuditSerializer(serializers.ModelSerializer):
             'address',
             'phone_number',
             'information',
+            'cover_image_url',
             'audit_status',
             'is_open',
             'deletion_requested',
@@ -330,19 +355,32 @@ class StadiumAuditSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class StadiumManageSerializer(serializers.ModelSerializer):
+class StadiumManageSerializer(StadiumCoverImageSerializerMixin, serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Stadium
-        fields = ['id', 'name', 'address', 'phone_number', 'information', 'audit_status', 'is_open', 'deletion_requested']
-        read_only_fields = ['id', 'audit_status', 'is_open', 'deletion_requested']
+        fields = [
+            'id',
+            'name',
+            'address',
+            'phone_number',
+            'information',
+            'cover_image_url',
+            'audit_status',
+            'is_open',
+            'deletion_requested',
+        ]
+        read_only_fields = ['id', 'cover_image_url', 'audit_status', 'is_open', 'deletion_requested']
 
 
-class StadiumDetailSerializer(serializers.ModelSerializer):
+class StadiumDetailSerializer(StadiumCoverImageSerializerMixin, serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
     fields = serializers.SerializerMethodField(method_name='get_stadium_fields')
 
     class Meta:
         model = Stadium
-        fields = ['id', 'name', 'address', 'phone_number', 'information', 'fields']
+        fields = ['id', 'name', 'address', 'phone_number', 'information', 'cover_image_url', 'fields']
         read_only_fields = fields
 
     def get_stadium_fields(self, obj):

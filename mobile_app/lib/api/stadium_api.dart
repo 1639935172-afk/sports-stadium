@@ -44,6 +44,8 @@ class StadiumApi {
   }
 
   Future<List<Stadium>> adminPending() async {
+    // System-admin review page: pending stadium submissions and deletion
+    // requests are loaded through this endpoint.
     final response = await client.dio.get<List<dynamic>>(
       '/stadiums/admin/pending/',
     );
@@ -108,6 +110,8 @@ class StadiumApi {
   }
 
   Future<List<StadiumField>> fields({required int stadiumId}) async {
+    // Stadium-admin field management page. Backend checks that the stadium
+    // belongs to the current JWT user.
     final response = await client.dio.get<List<dynamic>>(
       '/stadiums/mine/$stadiumId/fields/',
     );
@@ -167,6 +171,8 @@ class StadiumApi {
   }
 
   Future<List<TimeSlot>> timeSlots({required int fieldId}) async {
+    // Time-slot management page. The response is the editable list for one
+    // field, not the public bookable list shown to ordinary users.
     final response = await client.dio.get<List<dynamic>>(
       '/fields/$fieldId/time-slots/',
     );
@@ -183,6 +189,8 @@ class StadiumApi {
     required String endTime,
     required bool isAvailable,
   }) async {
+    // Bulk generation is a convenience API for stadium admins. Django still
+    // applies date range validation and overlap handling before saving rows.
     final response = await client.dio.post<Map<String, dynamic>>(
       '/fields/$fieldId/time-slots/',
       data: {
@@ -250,6 +258,7 @@ class StadiumApi {
   }
 
   Future<int> clearExpiredTimeSlots({required int fieldId}) async {
+    // Deletes only expired time slots under the current admin's own field.
     final response = await client.dio.post<Map<String, dynamic>>(
       '/fields/$fieldId/time-slots/clear-expired/',
     );

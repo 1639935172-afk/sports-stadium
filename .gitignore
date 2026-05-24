@@ -14,3 +14,7 @@ media/
 *.txt
 *.zip
 *.ppt
+*.doc
+backups/
+*.sql
+*.dump

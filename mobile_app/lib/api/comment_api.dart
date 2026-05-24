@@ -35,6 +35,8 @@ class CommentApi {
   }
 
   Future<List<StadiumComment>> mine() async {
+    // "My comments" page: shows the current user's comments in every audit
+    // status so the user can understand why a comment is not public yet.
     final response = await client.dio.get<List<dynamic>>('/comments/mine/');
     final data = response.data ?? <dynamic>[];
     return data
@@ -47,6 +49,7 @@ class CommentApi {
   }
 
   Future<List<StadiumComment>> adminPending() async {
+    // System-admin comment audit page. Only pending comments are returned.
     final response = await client.dio.get<List<dynamic>>(
       '/comments/admin/pending/',
     );
@@ -71,6 +74,7 @@ class CommentApi {
   }
 
   Future<void> delete({required int commentId}) async {
+    // System admins can delete any comment; ordinary users use deleteMine().
     await client.dio.delete<void>('/comments/$commentId/');
   }
 }

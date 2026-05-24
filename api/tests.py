@@ -1,6 +1,7 @@
 from datetime import date, timedelta, time
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -221,6 +222,25 @@ class StadiumApiTests(ApiBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item['name'] for item in response.data]
         self.assertEqual(names, ['API Stadium'])
+        self.assertEqual(response.data[0]['audit_status'], StadiumAuditStatus.APPROVED)
+        self.assertTrue(response.data[0]['is_open'])
+        self.assertFalse(response.data[0]['deletion_requested'])
+
+    def test_public_stadium_list_and_detail_return_cover_image_url(self):
+        self.stadium.cover_image = SimpleUploadedFile(
+            'api-stadium.jpg',
+            b'test image bytes',
+            content_type='image/jpeg',
+        )
+        self.stadium.save()
+
+        list_response = self.client.get(reverse('api:stadium_list'))
+        detail_response = self.client.get(reverse('api:stadium_detail', args=[self.stadium.pk]))
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertIn('/media/stadium_covers/', list_response.data[0]['cover_image_url'])
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertIn('/media/stadium_covers/', detail_response.data['cover_image_url'])
 
     def test_stadium_detail_hides_occupied_time_slots(self):
         Reservation.objects.create(user=self.user, time_slot=self.time_slot, status=ReservationStatus.PENDING)
