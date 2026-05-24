@@ -303,7 +303,7 @@ class _FieldCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _InfoRow(label: '编号', value: field.number),
+            _InfoRow(label: '名称', value: field.number),
             _InfoRow(label: '类型', value: field.fieldType),
             _InfoRow(label: '价格', value: '${field.pricePerHour} 元/小时'),
             const SizedBox(height: 12),

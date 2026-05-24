@@ -79,7 +79,7 @@ class Command(BaseCommand):
 
         slot, _ = TimeSlot.objects.update_or_create(
             field=field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             defaults={
                 'end_time': time(10, 0),
@@ -92,6 +92,9 @@ class Command(BaseCommand):
             time_slot=slot,
             defaults={'status': ReservationStatus.PENDING},
         )
+        payment = reservation.ensure_payment()
+        if payment.status == 'unpaid':
+            payment.mark_paid()
 
         Comment.objects.update_or_create(
             user=ordinary_user,

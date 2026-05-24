@@ -1,0 +1,126 @@
+{% extends "stadiums/stadium_admin_base.html" %}
+{% block title %}{{ title }} - 体育场馆预约系统{% endblock %}
+{% block stadium_admin_heading %}批量生成时段{% endblock %}
+{% block stadium_admin_style %}
+  .bulk-meta {
+    margin: -10px 0 22px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #4b5563;
+  }
+  .bulk-form {
+    width: min(100%, 920px);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .bulk-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+  }
+  .bulk-field {
+    display: grid;
+    gap: 8px;
+  }
+  .bulk-field label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .bulk-field input,
+  .bulk-field select {
+    min-height: 44px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 16px;
+    background: #ffffff;
+  }
+  .bulk-field.is-check {
+    align-content: end;
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
+    min-height: 72px;
+  }
+  .bulk-field.is-check input {
+    min-height: auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+  }
+  .bulk-field.is-check label {
+    font-weight: 700;
+  }
+  .bulk-errors {
+    margin: 0;
+    padding-left: 18px;
+    color: #b91c1c;
+    font-size: 14px;
+  }
+  .bulk-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 26px;
+  }
+  .bulk-button {
+    min-height: 48px;
+    min-width: 150px;
+    border: 0;
+    border-radius: 8px;
+    padding: 0 18px;
+    background: #66dfe8;
+    color: #111827;
+    font-size: 17px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .bulk-button.is-muted {
+    background: #d1d5db;
+  }
+{% endblock %}
+{% block stadium_admin_style_mobile %}
+  .bulk-form {
+    padding: 18px;
+  }
+  .bulk-grid {
+    grid-template-columns: 1fr;
+  }
+{% endblock %}
+{% block stadium_admin_content %}
+  <p class="bulk-meta">{{ field.stadium.name }} / {{ field.field_type }} / {{ field.number }}</p>
+  <form class="bulk-form" method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <ul class="bulk-errors">
+        {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <div class="bulk-grid">
+      {% for form_field in form %}
+        <div class="bulk-field{% if form_field.field.widget.input_type == 'checkbox' %} is-check{% endif %}">
+          {% if form_field.field.widget.input_type == 'checkbox' %}
+            {{ form_field }}{{ form_field.label_tag }}
+          {% else %}
+            {{ form_field.label_tag }}{{ form_field }}
+          {% endif %}
+          {% if form_field.errors %}
+            <ul class="bulk-errors">
+              {% for error in form_field.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="bulk-actions">
+      <button class="bulk-button" type="submit">生成时段</button>
+      <a class="bulk-button is-muted" href="{% url 'stadiums:time_slot_list' field.pk %}">返回</a>
+    </div>
+  </form>
+{% endblock %}

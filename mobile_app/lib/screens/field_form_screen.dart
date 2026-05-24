@@ -2,6 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../models/stadium.dart';
 
+const _otherFieldType = '__other__';
+const _fieldTypeOptions = <String>[
+  '足球',
+  '篮球',
+  '羽毛球',
+  '乒乓球',
+  '网球',
+  '排球',
+  '游泳',
+  '健身',
+  _otherFieldType,
+];
+
 class FieldFormValue {
   const FieldFormValue({
     required this.fieldType,
@@ -27,9 +40,10 @@ class FieldFormScreen extends StatefulWidget {
 
 class _FieldFormScreenState extends State<FieldFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _typeController;
+  late final TextEditingController _customTypeController;
   late final TextEditingController _numberController;
   late final TextEditingController _priceController;
+  late String _selectedFieldType;
   late bool _isActive;
 
   bool get _isEditing => widget.initialField != null;
@@ -38,7 +52,16 @@ class _FieldFormScreenState extends State<FieldFormScreen> {
   void initState() {
     super.initState();
     final field = widget.initialField;
-    _typeController = TextEditingController(text: field?.fieldType ?? '');
+    final initialType = field?.fieldType ?? '';
+    if (initialType.isNotEmpty && !_fieldTypeOptions.contains(initialType)) {
+      _selectedFieldType = _otherFieldType;
+      _customTypeController = TextEditingController(text: initialType);
+    } else {
+      _selectedFieldType = initialType.isEmpty
+          ? _fieldTypeOptions.first
+          : initialType;
+      _customTypeController = TextEditingController();
+    }
     _numberController = TextEditingController(text: field?.number ?? '');
     _priceController = TextEditingController(text: field?.pricePerHour ?? '');
     _isActive = field?.isActive ?? true;
@@ -46,7 +69,7 @@ class _FieldFormScreenState extends State<FieldFormScreen> {
 
   @override
   void dispose() {
-    _typeController.dispose();
+    _customTypeController.dispose();
     _numberController.dispose();
     _priceController.dispose();
     super.dispose();
@@ -54,9 +77,12 @@ class _FieldFormScreenState extends State<FieldFormScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final fieldType = _selectedFieldType == _otherFieldType
+        ? _customTypeController.text.trim()
+        : _selectedFieldType;
     Navigator.of(context).pop(
       FieldFormValue(
-        fieldType: _typeController.text.trim(),
+        fieldType: fieldType,
         number: _numberController.text.trim(),
         isActive: _isActive,
         pricePerHour: _priceController.text.trim(),
@@ -82,22 +108,47 @@ class _FieldFormScreenState extends State<FieldFormScreen> {
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _typeController,
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedFieldType,
                       decoration: const InputDecoration(labelText: '场地类型'),
-                      maxLength: 50,
-                      textInputAction: TextInputAction.next,
+                      items: _fieldTypeOptions
+                          .map(
+                            (type) => DropdownMenuItem<String>(
+                              value: type,
+                              child: Text(
+                                type == _otherFieldType ? '其他类型' : type,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _selectedFieldType = value;
+                        });
+                      },
                       validator: (value) =>
-                          (value ?? '').trim().isEmpty ? '请输入场地类型' : null,
+                          value == null || value.isEmpty ? '请选择场地类型' : null,
                     ),
+                    if (_selectedFieldType == _otherFieldType) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _customTypeController,
+                        decoration: const InputDecoration(labelText: '其他场地类型'),
+                        maxLength: 50,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) =>
+                            (value ?? '').trim().isEmpty ? '请输入其他场地类型' : null,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _numberController,
-                      decoration: const InputDecoration(labelText: '场地编号'),
+                      decoration: const InputDecoration(labelText: '场地名称'),
                       maxLength: 50,
                       textInputAction: TextInputAction.next,
                       validator: (value) =>
-                          (value ?? '').trim().isEmpty ? '请输入场地编号' : null,
+                          (value ?? '').trim().isEmpty ? '请输入场地名称' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(

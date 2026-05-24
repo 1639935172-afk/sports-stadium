@@ -8,18 +8,23 @@ from django.utils.translation import gettext_lazy as _
 from accounts.models import UserRole
 
 
+# 场馆审核状态：新建、修改、删除申请都会围绕这组状态流转。
+
+
 class StadiumAuditStatus(models.TextChoices):
     PENDING = 'pending', _('待审核')
     APPROVED = 'approved', _('通过')
     REJECTED = 'rejected', _('不通过')
 
 
+# 场馆联系电话要求使用 11 位手机号格式。
 mobile_phone_validator = RegexValidator(
     regex=r'^1\d{10}$',
     message='联系电话必须是11位手机号',
 )
 
 
+# 场馆模型：由场馆管理员维护，是场地和时段的上层实体。
 class Stadium(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -57,14 +62,17 @@ class Stadium(models.Model):
         return self.name
 
     def clean(self):
+        # 只有场馆管理员角色的用户才能作为场馆 owner。
         if self.owner_id and self.owner.role != UserRole.STADIUM_ADMIN:
             raise ValidationError('只有场馆管理员可以负责场馆')
 
     def save(self, *args, **kwargs):
+        # 正常保存场馆时统一先跑模型校验。
         self.full_clean()
         return super().save(*args, **kwargs)
 
     def submit_for_review(self):
+        # 提交审核后场馆重新回到待审核，并暂时不对外开放。
         self.audit_status = StadiumAuditStatus.PENDING
         self.is_open = False
         type(self).objects.filter(pk=self.pk).update(
@@ -73,6 +81,7 @@ class Stadium(models.Model):
         )
 
     def request_deletion(self):
+        # 场馆删除采用“先申请、后审核”的流程，而不是直接物理删除。
         self.deletion_requested = True
         self.audit_status = StadiumAuditStatus.PENDING
         type(self).objects.filter(pk=self.pk).update(
@@ -81,6 +90,7 @@ class Stadium(models.Model):
         )
 
     def cancel_deletion_request(self):
+        # 撤销删除申请后，场馆恢复到审核通过且开放状态。
         self.deletion_requested = False
         self.audit_status = StadiumAuditStatus.APPROVED
         self.is_open = True
@@ -91,10 +101,12 @@ class Stadium(models.Model):
         )
 
     def approve(self):
+        # 如果当前审批的是删除申请，则审核通过后直接删除场馆记录。
         if self.deletion_requested:
             self.delete()
             return 'deleted'
 
+        # 普通审核通过：场馆变为公开开放。
         self.audit_status = StadiumAuditStatus.APPROVED
         self.is_open = True
         type(self).objects.filter(pk=self.pk).update(
@@ -104,6 +116,7 @@ class Stadium(models.Model):
         return 'approved'
 
     def reject(self):
+        # 拒绝删除申请时恢复场馆；拒绝普通审核时保持不开放。
         if self.deletion_requested:
             self.deletion_requested = False
             self.audit_status = StadiumAuditStatus.APPROVED
@@ -118,6 +131,7 @@ class Stadium(models.Model):
         )
 
 
+# 场地模型：隶属于某个场馆，同一场馆下场地编号不能重复。
 class Field(models.Model):
     stadium = models.ForeignKey(
         Stadium,
@@ -142,9 +156,11 @@ class Field(models.Model):
         return f'{self.stadium.name} - {self.number}'
 
     def clean(self):
+        # 只有审核通过的场馆下才允许继续维护场地。
         if self.stadium_id and self.stadium.audit_status != StadiumAuditStatus.APPROVED:
             raise ValidationError('只能在审核通过的场馆下维护场地')
 
+# 时段模型：隶属于某个场地，是预约系统里的最小可预约单元。
 class TimeSlot(models.Model):
     field = models.ForeignKey(
         Field,
@@ -168,15 +184,18 @@ class TimeSlot(models.Model):
         return f'{self.field} {self.date} {self.start_time}-{self.end_time}'
 
     def clean(self):
+        # 起止时间必须形成一个正向区间。
         if self.start_time and self.end_time and self.start_time >= self.end_time:
             raise ValidationError('开始时间必须早于结束时间')
 
+        # 停用场地不能再新增可预约时段，避免前台继续看到可约数据。
         if self.field_id and self.is_available and not self.field.is_active:
             raise ValidationError('停用场地不能新增可约时段')
 
         if not all([self.field_id, self.date, self.start_time, self.end_time]):
             return
 
+        # 同一场地同一天的时段不能发生重叠。
         overlapping_slots = TimeSlot.objects.filter(
             field=self.field,
             date=self.date,
@@ -189,5 +208,6 @@ class TimeSlot(models.Model):
             raise ValidationError('同一场地同一天的开放时段不能重叠')
 
     def save(self, *args, **kwargs):
+        # 正常保存时段时统一先跑模型校验。
         self.full_clean()
         return super().save(*args, **kwargs)

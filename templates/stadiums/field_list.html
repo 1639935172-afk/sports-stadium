@@ -95,14 +95,18 @@
     justify-content: center;
     padding: 64px 24px 32px;
     z-index: 50;
+    overflow-y: auto;
   }
   .field-edit-modal {
     width: min(100%, 720px);
+    max-height: calc(100vh - 96px);
     border: 1px solid #d8dde6;
     border-radius: 24px;
     background: #fff;
     box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .field-edit-header {
     display: flex;
@@ -144,6 +148,7 @@
   }
   .field-edit-body {
     padding: 24px 32px 28px;
+    overflow-y: auto;
   }
   .field-edit-form {
     display: grid;
@@ -151,6 +156,9 @@
   }
   .field-edit-form .field {
     margin: 0;
+  }
+  .field-edit-form .field.is-hidden {
+    display: none;
   }
   .field-edit-form label {
     display: block;
@@ -212,6 +220,9 @@
   .field-edit-overlay {
     padding: 24px 12px;
   }
+  .field-edit-modal {
+    max-height: calc(100vh - 32px);
+  }
   .field-edit-header,
   .field-edit-body {
     padding-left: 18px;
@@ -270,20 +281,31 @@
     <div class="field-empty">当前还没有场地，先添加场地信息再继续管理时段。</div>
   {% endif %}
   <div class="field-add-wrap">
-    <a class="field-add-button" href="{% url 'stadiums:field_create' stadium.pk %}">添加场地信息</a>
+    <a class="field-add-button" href="{% url 'stadiums:field_list' stadium.pk %}?modal=create">添加场地信息</a>
   </div>
-  {% if show_edit_field_modal %}
+  {% if show_create_field_modal or show_edit_field_modal %}
     <div class="field-edit-overlay">
       <div class="field-edit-modal">
         <div class="field-edit-header">
           <div>
-            <h3 class="field-edit-title">修改场地信息</h3>
-            <p class="field-edit-subtitle">在当前场地管理页中修改场地基础信息，保存后立即更新。</p>
+            <h3 class="field-edit-title">{% if show_edit_field_modal %}修改场地信息{% else %}添加场地信息{% endif %}</h3>
+            <p class="field-edit-subtitle">
+              {% if show_edit_field_modal %}
+                在当前场地管理页中修改场地基础信息，保存后立即更新。
+              {% else %}
+                在当前场地管理页中填写场地类型、编号、状态和预约单价，保存后即可继续管理时段。
+              {% endif %}
+            </p>
           </div>
           <a class="field-edit-close" href="{% url 'stadiums:field_list' stadium.pk %}" aria-label="关闭">×</a>
         </div>
         <div class="field-edit-body">
-          <form class="field-edit-form" method="post" action="{% url 'stadiums:field_edit' edit_field.pk %}" novalidate>
+          <form
+            class="field-edit-form"
+            method="post"
+            action="{% if show_edit_field_modal %}{% url 'stadiums:field_edit' edit_field.pk %}{% else %}{% url 'stadiums:field_create' stadium.pk %}{% endif %}"
+            novalidate
+          >
             {% csrf_token %}
             {% if field_modal_form.non_field_errors %}
               <ul class="errors">
@@ -293,9 +315,12 @@
               </ul>
             {% endif %}
             {% for field in field_modal_form %}
-              <div class="field">
+              <div class="field{% if field.name == 'custom_field_type' %} field-type-custom-row{% endif %}">
                 {{ field.label_tag }}
                 {{ field }}
+                {% if field.help_text %}
+                  <div class="help">{{ field.help_text }}</div>
+                {% endif %}
                 {% if field.errors %}
                   <ul class="errors">
                     {% for error in field.errors %}
@@ -306,12 +331,24 @@
               </div>
             {% endfor %}
             <div class="field-edit-actions">
-              <button class="field-edit-submit" type="submit">保存</button>
+              <button class="field-edit-submit" type="submit">{% if show_edit_field_modal %}保存{% else %}添加场地{% endif %}</button>
               <a class="field-edit-back" href="{% url 'stadiums:field_list' stadium.pk %}">返回场地管理</a>
             </div>
           </form>
         </div>
       </div>
     </div>
+    <script>
+      (function () {
+        var typeSelect = document.getElementById('id_field_type');
+        var customRow = document.querySelector('.field-type-custom-row');
+        if (!typeSelect || !customRow) return;
+        function syncCustomField() {
+          customRow.classList.toggle('is-hidden', typeSelect.value !== '__other__');
+        }
+        typeSelect.addEventListener('change', syncCustomField);
+        syncCustomField();
+      })();
+    </script>
   {% endif %}
 {% endblock %}

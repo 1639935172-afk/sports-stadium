@@ -1,14 +1,15 @@
-from datetime import date, time
+from datetime import date, timedelta, time
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import UserRole
 from comments.models import Comment, CommentAuditStatus
-from reservations.models import Reservation, ReservationStatus
+from reservations.models import PaymentStatus, Reservation, ReservationStatus
 from stadiums.models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
 
@@ -222,7 +223,7 @@ class StadiumApiTests(ApiBaseTestCase):
         self.assertEqual(names, ['API Stadium'])
 
     def test_stadium_detail_hides_occupied_time_slots(self):
-        Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        Reservation.objects.create(user=self.user, time_slot=self.time_slot, status=ReservationStatus.PENDING)
 
         response = self.client.get(reverse('api:stadium_detail', args=[self.stadium.pk]))
 
@@ -579,6 +580,70 @@ class StadiumApiTests(ApiBaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_bulk_generate_time_slots_rejects_past_start_date(self):
+        self.authenticate(self.stadium_admin)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        tomorrow = timezone.localdate() + timedelta(days=1)
+
+        response = self.client.post(
+            reverse('api:time_slot_bulk_generate', args=[self.field.pk]),
+            {
+                'field_scope': 'current',
+                'start_date': yesterday.isoformat(),
+                'end_date': tomorrow.isoformat(),
+                'start_time': '13:00:00',
+                'end_time': '15:00:00',
+                'slot_minutes': 60,
+                'price_per_hour': '80.00',
+                'is_available': True,
+                'skip_existing': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(TimeSlot.objects.filter(date=yesterday).exists())
+
+    def test_clear_expired_time_slots_only_clears_current_field(self):
+        self.authenticate(self.stadium_admin)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        expired = TimeSlot.objects.create(
+            field=self.field,
+            date=yesterday,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        future = TimeSlot.objects.create(
+            field=self.field,
+            date=tomorrow,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+        other_field = Field.objects.create(
+            stadium=self.stadium,
+            field_type='Tennis',
+            number='T1',
+            price_per_hour='100.00',
+        )
+        other_expired = TimeSlot.objects.create(
+            field=other_field,
+            date=yesterday,
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+        )
+
+        response = self.client.post(
+            reverse('api:time_slot_clear_expired', args=[self.field.pk]),
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['deleted_count'], 1)
+        self.assertFalse(TimeSlot.objects.filter(pk=expired.pk).exists())
+        self.assertTrue(TimeSlot.objects.filter(pk=future.pk).exists())
+        self.assertTrue(TimeSlot.objects.filter(pk=other_expired.pk).exists())
+
 
 class ReservationApiTests(ApiBaseTestCase):
     def test_unauthenticated_user_cannot_create_reservation(self):
@@ -591,7 +656,22 @@ class ReservationApiTests(ApiBaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         reservation = Reservation.objects.get(user=self.user)
+        self.assertEqual(reservation.status, ReservationStatus.AWAITING_PAYMENT)
+        self.assertEqual(reservation.payment.status, PaymentStatus.UNPAID)
+        self.assertEqual(response.data['payment_status'], PaymentStatus.UNPAID)
+
+    def test_user_can_pay_reservation_before_admin_review(self):
+        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation.ensure_payment()
+        self.authenticate()
+
+        response = self.client.post(reverse('api:reservation_pay', args=[reservation.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        reservation.refresh_from_db()
         self.assertEqual(reservation.status, ReservationStatus.PENDING)
+        self.assertEqual(reservation.payment.status, PaymentStatus.PAID)
+        self.assertEqual(response.data['payment_status'], PaymentStatus.PAID)
 
     def test_duplicate_occupied_time_slot_is_rejected(self):
         Reservation.objects.create(user=self.other_user, time_slot=self.time_slot)
@@ -603,7 +683,7 @@ class ReservationApiTests(ApiBaseTestCase):
         self.assertEqual(Reservation.objects.count(), 1)
 
     def test_user_can_list_own_reservations(self):
-        Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        Reservation.objects.create(user=self.user, time_slot=self.time_slot, status=ReservationStatus.PENDING)
         self.authenticate()
 
         response = self.client.get(reverse('api:my_reservations'))
@@ -613,7 +693,11 @@ class ReservationApiTests(ApiBaseTestCase):
         self.assertEqual(response.data[0]['stadium_name'], self.stadium.name)
 
     def test_user_can_cancel_own_reservation(self):
-        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         self.authenticate()
 
         response = self.client.post(reverse('api:reservation_cancel', args=[reservation.pk]))
@@ -631,7 +715,7 @@ class ReservationApiTests(ApiBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_stadium_admin_can_list_pending_reservations_for_own_stadium(self):
-        Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        Reservation.objects.create(user=self.user, time_slot=self.time_slot, status=ReservationStatus.PENDING)
         self.authenticate(self.stadium_admin)
 
         response = self.client.get(reverse('api:admin_pending_reservations'))
@@ -640,8 +724,32 @@ class ReservationApiTests(ApiBaseTestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['stadium_name'], self.stadium.name)
 
+    def test_stadium_admin_pending_reservations_hide_expired_items(self):
+        expired_slot = TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 6, 9),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        Reservation.objects.create(
+            user=self.user,
+            time_slot=expired_slot,
+            status=ReservationStatus.PENDING,
+        )
+        TimeSlot.objects.filter(pk=expired_slot.pk).update(date=date(2026, 5, 19))
+        self.authenticate(self.stadium_admin)
+
+        response = self.client.get(reverse('api:admin_pending_reservations'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
     def test_stadium_admin_can_approve_pending_reservation(self):
-        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         self.authenticate(self.stadium_admin)
 
         response = self.client.post(reverse('api:reservation_approve', args=[reservation.pk]))
@@ -651,7 +759,11 @@ class ReservationApiTests(ApiBaseTestCase):
         self.assertEqual(reservation.status, ReservationStatus.APPROVED)
 
     def test_stadium_admin_can_reject_pending_reservation(self):
-        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         self.authenticate(self.stadium_admin)
 
         response = self.client.post(reverse('api:reservation_reject', args=[reservation.pk]))

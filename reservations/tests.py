@@ -8,7 +8,7 @@ from django.urls import reverse
 from accounts.models import UserRole
 from stadiums.models import Field, Stadium, StadiumAuditStatus, TimeSlot
 
-from .models import Reservation, ReservationStatus
+from .models import PaymentStatus, Reservation, ReservationStatus
 
 
 class ReservationSubmissionTests(TestCase):
@@ -33,7 +33,7 @@ class ReservationSubmissionTests(TestCase):
             owner=self.stadium_admin,
             name='Reservation Stadium',
             address='Address',
-            phone_number='02512345678',
+            phone_number='13812345678',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,
@@ -46,12 +46,12 @@ class ReservationSubmissionTests(TestCase):
         )
         self.time_slot = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             end_time=time(10, 0),
         )
 
-    def test_ordinary_user_can_submit_reservation_and_status_is_pending(self):
+    def test_ordinary_user_can_submit_reservation_and_status_is_awaiting_payment(self):
         self.client.force_login(self.user)
 
         response = self.client.post(reverse('reservations:create', args=[self.time_slot.pk]), follow=True)
@@ -59,7 +59,35 @@ class ReservationSubmissionTests(TestCase):
         self.assertRedirects(response, reverse('reservations:mine'))
         reservation = Reservation.objects.get(user=self.user)
         self.assertEqual(reservation.time_slot, self.time_slot)
+        self.assertEqual(reservation.status, ReservationStatus.AWAITING_PAYMENT)
+        self.assertEqual(reservation.payment.status, PaymentStatus.UNPAID)
+        self.assertEqual(str(reservation.payment.amount), str(self.field.price_per_hour))
+
+    def test_user_can_pay_awaiting_payment_reservation_then_it_enters_pending_review(self):
+        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation.ensure_payment()
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('reservations:pay', args=[reservation.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('reservations:mine'))
+        reservation.refresh_from_db()
         self.assertEqual(reservation.status, ReservationStatus.PENDING)
+        self.assertEqual(reservation.payment.status, PaymentStatus.PAID)
+
+    def test_user_can_mark_payment_failed_and_release_slot(self):
+        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation.ensure_payment()
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('reservations:payment_fail', args=[reservation.pk]), follow=True)
+
+        self.assertRedirects(response, reverse('reservations:mine'))
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.status, ReservationStatus.PAYMENT_FAILED)
+        self.assertEqual(reservation.payment.status, PaymentStatus.FAILED)
+        new_reservation = Reservation.objects.create(user=self.other_user, time_slot=self.time_slot)
+        self.assertEqual(new_reservation.status, ReservationStatus.AWAITING_PAYMENT)
 
     def test_anonymous_user_cannot_submit_reservation(self):
         response = self.client.post(reverse('reservations:create', args=[self.time_slot.pk]))
@@ -127,13 +155,13 @@ class ReservationSubmissionTests(TestCase):
 
         new_reservation = Reservation.objects.create(user=self.other_user, time_slot=self.time_slot)
 
-        self.assertEqual(new_reservation.status, ReservationStatus.PENDING)
+        self.assertEqual(new_reservation.status, ReservationStatus.AWAITING_PAYMENT)
 
     def test_my_reservations_shows_only_current_user_reservations(self):
         own = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
         other_slot = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(10, 0),
             end_time=time(11, 0),
         )
@@ -165,7 +193,11 @@ class ReservationSubmissionTests(TestCase):
         self.assertNotContains(response, reverse('reservations:create', args=[self.time_slot.pk]))
 
     def test_stadium_admin_can_view_only_owned_pending_reservations(self):
-        own_reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        own_reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         other_admin = get_user_model().objects.create_user(
             phone_number='13400000004',
             password='pass',
@@ -175,7 +207,7 @@ class ReservationSubmissionTests(TestCase):
             owner=other_admin,
             name='Other Stadium',
             address='Other Address',
-            phone_number='02587654321',
+            phone_number='13887654321',
             information='Info',
             audit_status=StadiumAuditStatus.APPROVED,
             is_open=True,
@@ -188,28 +220,62 @@ class ReservationSubmissionTests(TestCase):
         )
         other_slot = TimeSlot.objects.create(
             field=other_field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(9, 0),
             end_time=time(10, 0),
         )
-        other_reservation = Reservation.objects.create(user=self.other_user, time_slot=other_slot)
+        other_reservation = Reservation.objects.create(
+            user=self.other_user,
+            time_slot=other_slot,
+            status=ReservationStatus.PENDING,
+        )
         self.client.force_login(self.stadium_admin)
 
         response = self.client.get(reverse('reservations:admin_pending'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, own_reservation.user.phone_number)
+        self.assertContains(response, '2026-06-08')
         self.assertNotContains(response, other_reservation.user.phone_number)
 
+    def test_stadium_admin_pending_list_hides_expired_reservations(self):
+        expired_slot = TimeSlot.objects.create(
+            field=self.field,
+            date=date(2026, 6, 9),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        expired_reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=expired_slot,
+            status=ReservationStatus.PENDING,
+        )
+        TimeSlot.objects.filter(pk=expired_slot.pk).update(date=date(2026, 5, 19))
+        self.client.force_login(self.stadium_admin)
+
+        response = self.client.get(reverse('reservations:admin_pending'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '2026-05-19')
+        self.assertNotContains(response, expired_reservation.user.phone_number)
+
     def test_stadium_admin_can_approve_and_reject_owned_pending_reservations(self):
-        to_approve = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        to_approve = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         other_slot = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(10, 0),
             end_time=time(11, 0),
         )
-        to_reject = Reservation.objects.create(user=self.other_user, time_slot=other_slot)
+        to_reject = Reservation.objects.create(
+            user=self.other_user,
+            time_slot=other_slot,
+            status=ReservationStatus.PENDING,
+        )
         self.client.force_login(self.stadium_admin)
 
         approve_response = self.client.post(reverse('reservations:approve', args=[to_approve.pk]))
@@ -223,7 +289,11 @@ class ReservationSubmissionTests(TestCase):
         self.assertEqual(to_reject.status, ReservationStatus.REJECTED)
 
     def test_non_owner_cannot_review_reservation(self):
-        reservation = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        reservation = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         other_admin = get_user_model().objects.create_user(
             phone_number='13400000005',
             password='pass',
@@ -244,10 +314,14 @@ class ReservationSubmissionTests(TestCase):
             Reservation.objects.create(user=self.other_user, time_slot=self.time_slot)
 
     def test_user_can_cancel_own_pending_or_approved_reservation(self):
-        pending = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
+        pending = Reservation.objects.create(
+            user=self.user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
         other_slot = TimeSlot.objects.create(
             field=self.field,
-            date=date(2026, 5, 8),
+            date=date(2026, 6, 8),
             start_time=time(10, 0),
             end_time=time(11, 0),
         )
@@ -267,7 +341,11 @@ class ReservationSubmissionTests(TestCase):
         cancelled = Reservation.objects.create(user=self.user, time_slot=self.time_slot)
         cancelled.approve()
         cancelled.cancel()
-        pending = Reservation.objects.create(user=self.other_user, time_slot=self.time_slot)
+        pending = Reservation.objects.create(
+            user=self.other_user,
+            time_slot=self.time_slot,
+            status=ReservationStatus.PENDING,
+        )
 
         pending.approve()
 
@@ -282,4 +360,4 @@ class ReservationSubmissionTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         reservation.refresh_from_db()
-        self.assertEqual(reservation.status, ReservationStatus.PENDING)
+        self.assertEqual(reservation.status, ReservationStatus.AWAITING_PAYMENT)

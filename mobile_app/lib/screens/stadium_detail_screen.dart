@@ -87,9 +87,10 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
     });
 
     try {
+      // 页面只提交 timeSlotId，预约状态流转和冲突校验都交给后端 API。
       await widget.reservationApi.create(timeSlotId: timeSlotId);
       if (!mounted) return;
-      AppFeedback.showMessage(context, '预约已提交，等待场馆管理员审核。');
+      AppFeedback.showMessage(context, '预约已创建，请到我的预约完成支付。');
       await _loadDetail();
     } catch (_) {
       if (!mounted) return;
@@ -110,6 +111,7 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
     });
 
     try {
+      // 详情和评论来自两个接口：场馆详情返回场地/时段，评论接口只返回已审核评论。
       final detailResult = await widget.api.detail(widget.stadiumId);
       final commentResult = await widget.commentApi.listForStadium(
         widget.stadiumId,
@@ -162,6 +164,19 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
     }
   }
 
+  Future<void> _openAllTimeSlots(StadiumField field) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => _FieldTimeSlotsScreen(
+          field: field,
+          submittingSlotId: submittingSlotId,
+          canReserve: widget.canReserve,
+          onReserve: (slot) => _confirmReservation(field, slot),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,6 +217,9 @@ class _StadiumDetailScreenState extends State<StadiumDetailScreen> {
                       submittingSlotId: submittingSlotId,
                       canReserve: widget.canReserve,
                       onReserve: (slot) => _confirmReservation(field, slot),
+                      onViewAll: field.timeSlots.length > 3
+                          ? () => _openAllTimeSlots(field)
+                          : null,
                     ),
                     const SizedBox(height: 12),
                   ]
@@ -374,12 +392,14 @@ class _FieldCard extends StatelessWidget {
     required this.submittingSlotId,
     required this.canReserve,
     required this.onReserve,
+    required this.onViewAll,
   });
 
   final StadiumField field;
   final int submittingSlotId;
   final bool canReserve;
   final ValueChanged<TimeSlot> onReserve;
+  final VoidCallback? onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -388,6 +408,8 @@ class _FieldCard extends StatelessWidget {
       field.number,
     ].where((value) => value.trim().isNotEmpty).join(' ');
     final hasPrice = field.pricePerHour.trim().isNotEmpty;
+    final slots = _sortedSlots(field.timeSlots);
+    final previewSlots = slots.take(3).toList();
 
     return Card(
       child: Padding(
@@ -409,37 +431,29 @@ class _FieldCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
-            if (field.timeSlots.isEmpty)
+            if (slots.isEmpty)
               Text('暂无可约时段。', style: Theme.of(context).textTheme.bodyMedium)
             else
               Column(
                 children: [
-                  for (final slot in field.timeSlots)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.schedule, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${slot.date} ${_trimSeconds(slot.startTime)}-${_trimSeconds(slot.endTime)}',
-                            ),
-                          ),
-                          if (canReserve) ...[
-                            const SizedBox(width: 12),
-                            FilledButton(
-                              onPressed: submittingSlotId == 0
-                                  ? () => onReserve(slot)
-                                  : null,
-                              child: submittingSlotId == slot.id
-                                  ? const AppLoadingIcon()
-                                  : const Text('预约'),
-                            ),
-                          ],
-                        ],
+                  for (final slot in previewSlots)
+                    _TimeSlotRow(
+                      slot: slot,
+                      submittingSlotId: submittingSlotId,
+                      canReserve: canReserve,
+                      onReserve: onReserve,
+                    ),
+                  if (onViewAll != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: onViewAll,
+                        icon: const Icon(Icons.list_alt_outlined),
+                        label: Text('查看全部 ${slots.length} 条'),
                       ),
                     ),
+                  ],
                 ],
               ),
           ],
@@ -447,6 +461,208 @@ class _FieldCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FieldTimeSlotsScreen extends StatefulWidget {
+  const _FieldTimeSlotsScreen({
+    required this.field,
+    required this.submittingSlotId,
+    required this.canReserve,
+    required this.onReserve,
+  });
+
+  final StadiumField field;
+  final int submittingSlotId;
+  final bool canReserve;
+  final ValueChanged<TimeSlot> onReserve;
+
+  @override
+  State<_FieldTimeSlotsScreen> createState() => _FieldTimeSlotsScreenState();
+}
+
+class _FieldTimeSlotsScreenState extends State<_FieldTimeSlotsScreen> {
+  var selectedDate = '';
+  var pendingDate = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final title = [
+      widget.field.fieldType,
+      widget.field.number,
+    ].where((value) => value.trim().isNotEmpty).join(' ');
+    final allSlots = _sortedSlots(widget.field.timeSlots);
+    final dateOptions = _slotDates(allSlots);
+    final visibleSlots = selectedDate.isEmpty
+        ? allSlots
+        : allSlots.where((slot) => slot.date == selectedDate).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(title.isEmpty ? '可预约时段' : title),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            if (dateOptions.isNotEmpty) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '筛选日期',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      InputDecorator(
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.event_outlined),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: pendingDate,
+                            isExpanded: true,
+                            items: [
+                              const DropdownMenuItem(
+                                value: '',
+                                child: Text('全部日期'),
+                              ),
+                              for (final date in dateOptions)
+                                DropdownMenuItem(
+                                  value: date,
+                                  child: Text(date),
+                                ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                pendingDate = value ?? '';
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          FilledButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                selectedDate = pendingDate;
+                              });
+                            },
+                            icon: const Icon(Icons.filter_alt_outlined),
+                            label: const Text('筛选'),
+                          ),
+                          const SizedBox(width: 12),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                pendingDate = '';
+                                selectedDate = '';
+                              });
+                            },
+                            child: const Text('重置'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (visibleSlots.isEmpty)
+              const AppMessagePanel(
+                icon: Icons.event_busy,
+                message: '当前日期暂无可约时段。',
+              )
+            else
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      for (final slot in visibleSlots)
+                        _TimeSlotRow(
+                          slot: slot,
+                          submittingSlotId: widget.submittingSlotId,
+                          canReserve: widget.canReserve,
+                          onReserve: widget.onReserve,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeSlotRow extends StatelessWidget {
+  const _TimeSlotRow({
+    required this.slot,
+    required this.submittingSlotId,
+    required this.canReserve,
+    required this.onReserve,
+  });
+
+  final TimeSlot slot;
+  final int submittingSlotId;
+  final bool canReserve;
+  final ValueChanged<TimeSlot> onReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.schedule, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${slot.date} ${_trimSeconds(slot.startTime)}-${_trimSeconds(slot.endTime)}',
+            ),
+          ),
+          if (canReserve) ...[
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: submittingSlotId == 0 ? () => onReserve(slot) : null,
+              child: submittingSlotId == slot.id
+                  ? const AppLoadingIcon()
+                  : const Text('预约'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+List<TimeSlot> _sortedSlots(Iterable<TimeSlot> slots) {
+  final sorted = slots.toList();
+  sorted.sort((a, b) {
+    final dateCompare = a.date.compareTo(b.date);
+    if (dateCompare != 0) return dateCompare;
+    return a.startTime.compareTo(b.startTime);
+  });
+  return sorted;
+}
+
+List<String> _slotDates(Iterable<TimeSlot> slots) {
+  final dates = <String>{};
+  for (final slot in slots) {
+    if (slot.date.isNotEmpty) dates.add(slot.date);
+  }
+  return dates.toList()..sort();
 }
 
 class _IconText extends StatelessWidget {
