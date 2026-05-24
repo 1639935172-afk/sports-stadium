@@ -71,6 +71,7 @@ class AuthApi {
   }
 
   Future<AppUser> updateProfile({required String nickname}) async {
+    // PATCH keeps unchanged profile fields untouched on the Django side.
     final response = await client.dio.patch<Map<String, dynamic>>(
       '/profile/',
       data: {'nickname': nickname},
@@ -83,6 +84,8 @@ class AuthApi {
     required String newPassword1,
     required String newPassword2,
   }) async {
+    // Password validation is still performed by Django; the app only collects
+    // form fields and displays the returned validation message.
     final response = await client.dio.post<Map<String, dynamic>>(
       '/password/change/',
       data: {
@@ -113,6 +116,8 @@ class AuthApi {
   }
 
   Future<AppUser> cancelAccount({required String password}) async {
+    // Account cancellation is logical, not a physical database delete, so
+    // historical reservations and comments can still be retained.
     final response = await client.dio.post<Map<String, dynamic>>(
       '/account/cancel/',
       data: {'password': password},

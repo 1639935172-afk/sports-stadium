@@ -181,64 +181,68 @@ class _SystemUserListScreenState extends State<SystemUserListScreen> {
     return Scaffold(
       appBar: AppBar(centerTitle: true, title: const Text('用户管理')),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    textInputAction: TextInputAction.search,
-                    decoration: const InputDecoration(
-                      labelText: '搜索用户',
-                      hintText: '输入手机号或昵称',
-                      prefixIcon: Icon(Icons.search),
+        child: RefreshIndicator(
+          onRefresh: _loadUsers,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: searchController,
+                      textInputAction: TextInputAction.search,
+                      decoration: const InputDecoration(
+                        labelText: '搜索用户',
+                        hintText: '输入手机号或昵称',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onSubmitted: (_) => _loadUsers(),
                     ),
-                    onSubmitted: (_) => _loadUsers(),
                   ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: isLoading ? null : _loadUsers,
-                  icon: const Icon(Icons.search),
-                  label: const Text('搜索'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (isLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (errorMessage != null)
-              _MessagePanel(
-                icon: Icons.cloud_off,
-                message: errorMessage!,
-                action: TextButton.icon(
-                  onPressed: _loadUsers,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
-                ),
-              )
-            else if (users.isEmpty)
-              const _MessagePanel(
-                icon: Icons.people_alt_outlined,
-                message: '暂无符合条件的用户。',
-              )
-            else
-              for (final user in users) ...[
-                _UserCard(
-                  user: user,
-                  isCurrentUser: user.id == widget.currentUserId,
-                  onEdit: user.id == widget.currentUserId
-                      ? null
-                      : () => _editUser(user),
-                ),
-                const SizedBox(height: 12),
-              ],
-          ],
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: isLoading ? null : _loadUsers,
+                    icon: const Icon(Icons.search),
+                    label: const Text('搜索'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (errorMessage != null)
+                _MessagePanel(
+                  icon: Icons.cloud_off,
+                  message: errorMessage!,
+                  action: TextButton.icon(
+                    onPressed: _loadUsers,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                )
+              else if (users.isEmpty)
+                const _MessagePanel(
+                  icon: Icons.people_alt_outlined,
+                  message: '暂无符合条件的用户。',
+                )
+              else
+                for (final user in users) ...[
+                  _UserCard(
+                    user: user,
+                    isCurrentUser: user.id == widget.currentUserId,
+                    onEdit: user.id == widget.currentUserId
+                        ? null
+                        : () => _editUser(user),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+            ],
+          ),
         ),
       ),
     );

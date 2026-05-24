@@ -26,6 +26,7 @@ mobile_phone_validator = RegexValidator(
 
 # 场馆模型：由场馆管理员维护，是场地和时段的上层实体。
 class Stadium(models.Model):
+    # owner links each stadium to the stadium-admin account that can maintain it.
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -133,6 +134,7 @@ class Stadium(models.Model):
 
 # 场地模型：隶属于某个场馆，同一场馆下场地编号不能重复。
 class Field(models.Model):
+    # A field belongs to one stadium. Deleting the stadium also deletes its fields.
     stadium = models.ForeignKey(
         Stadium,
         on_delete=models.CASCADE,
@@ -162,6 +164,7 @@ class Field(models.Model):
 
 # 时段模型：隶属于某个场地，是预约系统里的最小可预约单元。
 class TimeSlot(models.Model):
+    # A time slot is the smallest bookable unit in the system.
     field = models.ForeignKey(
         Field,
         on_delete=models.CASCADE,

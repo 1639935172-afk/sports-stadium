@@ -9,7 +9,9 @@ class ApiClient {
   ApiClient()
     : dio = Dio(
         BaseOptions(
-          baseUrl: 'http://10.0.2.2:8000/api',
+          // Android emulator uses 10.0.2.2 to reach the host machine where
+          // Django runs. All business API classes reuse this same Dio client.
+          baseUrl: 'http://10.100.241.128:8000/api',
           connectTimeout: const Duration(seconds: 8),
           receiveTimeout: const Duration(seconds: 8),
           headers: {'Accept': 'application/json'},

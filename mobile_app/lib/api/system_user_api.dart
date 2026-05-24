@@ -21,6 +21,7 @@ class SystemUserApi {
         .toList();
   }
 
+  /// 加载单个用户信息，用于编辑对话框/详情视图。
   Future<AppUser> detail(int id) async {
     final response = await client.dio.get<Map<String, dynamic>>(
       '/system/users/$id/',
@@ -28,6 +29,7 @@ class SystemUserApi {
     return AppUser.fromJson(response.data ?? <String, dynamic>{});
   }
 
+  /// 系统管理员更新接口。后端会阻止通过此路径编辑当前管理员账号，以避免自我锁定。
   Future<AppUser> update({
     required int id,
     required String nickname,

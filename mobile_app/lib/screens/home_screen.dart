@@ -67,7 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await stadiumApi.list(query: searchController.text);
       if (!mounted) return;
       setState(() {
-        stadiums = result;
+        stadiums = result
+            .where((stadium) => stadium.isPubliclyVisible)
+            .toList();
         isLoading = false;
       });
     } catch (_) {
@@ -125,66 +127,70 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('场馆列表'),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      labelText: '搜索场馆',
-                      hintText: '输入名称或地址',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: '清空',
-                              onPressed: _clearSearch,
-                              icon: const Icon(Icons.clear),
-                            ),
+        child: RefreshIndicator(
+          onRefresh: _loadStadiums,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: searchController,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        labelText: '搜索场馆',
+                        hintText: '输入名称或地址',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: searchController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: '清空',
+                                onPressed: _clearSearch,
+                                icon: const Icon(Icons.clear),
+                              ),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _loadStadiums(),
                     ),
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => _loadStadiums(),
                   ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: isLoading ? null : _loadStadiums,
-                  icon: const Icon(Icons.search),
-                  label: const Text('搜索'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (isLoading)
-              const AppPageLoading(topPadding: 80)
-            else if (errorMessage != null)
-              AppMessagePanel(
-                icon: Icons.cloud_off,
-                message: errorMessage!,
-                action: TextButton.icon(
-                  onPressed: _loadStadiums,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('重试'),
-                ),
-              )
-            else if (stadiums.isEmpty)
-              const AppMessagePanel(
-                icon: Icons.search_off,
-                message: '暂无符合条件的场馆。',
-              )
-            else
-              for (final stadium in stadiums) ...[
-                _StadiumCard(
-                  stadium: stadium,
-                  onTap: () => _openDetail(stadium),
-                ),
-                const SizedBox(height: 12),
-              ],
-          ],
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: isLoading ? null : _loadStadiums,
+                    icon: const Icon(Icons.search),
+                    label: const Text('搜索'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (isLoading)
+                const AppPageLoading(topPadding: 80)
+              else if (errorMessage != null)
+                AppMessagePanel(
+                  icon: Icons.cloud_off,
+                  message: errorMessage!,
+                  action: TextButton.icon(
+                    onPressed: _loadStadiums,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('重试'),
+                  ),
+                )
+              else if (stadiums.isEmpty)
+                const AppMessagePanel(
+                  icon: Icons.search_off,
+                  message: '暂无符合条件的场馆。',
+                )
+              else
+                for (final stadium in stadiums) ...[
+                  _StadiumCard(
+                    stadium: stadium,
+                    onTap: () => _openDetail(stadium),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+            ],
+          ),
         ),
       ),
     );
@@ -492,40 +498,103 @@ class _StadiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasCover = stadium.coverImageUrl.trim().isNotEmpty;
     return Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      stadium.name,
-                      style: Theme.of(context).textTheme.titleMedium,
+          child: hasCover
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _StadiumCoverImage(
+                      imageUrl: stadium.coverImageUrl,
+                      width: 108,
+                      height: 108,
                     ),
-                  ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _IconText(icon: Icons.place_outlined, text: stadium.address),
-              _IconText(icon: Icons.phone_outlined, text: stadium.phoneNumber),
-              if (stadium.information.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  stadium.information,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 14),
+                    Expanded(child: _StadiumCardContent(stadium: stadium)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _StadiumCardContent(stadium: stadium)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right),
+                  ],
                 ),
-              ],
-            ],
-          ),
         ),
+      ),
+    );
+  }
+}
+
+class _StadiumCardContent extends StatelessWidget {
+  const _StadiumCardContent({required this.stadium});
+
+  final Stadium stadium;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          stadium.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
+        _IconText(icon: Icons.place_outlined, text: stadium.address),
+        _IconText(icon: Icons.phone_outlined, text: stadium.phoneNumber),
+        if (stadium.information.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            stadium.information,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StadiumCoverImage extends StatelessWidget {
+  const _StadiumCoverImage({
+    required this.imageUrl,
+    required this.width,
+    required this.height,
+  });
+
+  final String imageUrl;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        imageUrl,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: width,
+            height: height,
+            color: const Color(0xFFE5E7EB),
+            alignment: Alignment.center,
+            child: const Icon(Icons.image_not_supported_outlined),
+          );
+        },
       ),
     );
   }

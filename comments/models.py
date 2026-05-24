@@ -14,6 +14,8 @@ class CommentAuditStatus(models.TextChoices):
 
 
 class Comment(models.Model):
+    # Comment belongs to both the author and the stadium. Public pages only show
+    # comments after the system administrator approves them.
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -45,6 +47,8 @@ class Comment(models.Model):
         return f'{self.user} - {self.stadium}'
 
     def clean(self):
+        # Keep the comment permission rule close to the database model so Web
+        # forms and API serializers cannot accidentally bypass it.
         if self.user_id and self.user.role != UserRole.ORDINARY:
             raise ValidationError('只有普通用户可以提交评论')
 

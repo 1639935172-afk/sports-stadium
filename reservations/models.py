@@ -29,6 +29,8 @@ class PaymentStatus(models.TextChoices):
 
 # 预约表：记录“哪个普通用户预约了哪个时段”。
 class Reservation(models.Model):
+    # Reservation connects the current ordinary user with one concrete TimeSlot.
+    # This is the core booking table used by both Web pages and REST APIs.
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -179,6 +181,8 @@ class Reservation(models.Model):
 
 
 class Payment(models.Model):
+    # Payment is one-to-one with Reservation so each booking has at most one
+    # simulated payment order. It is enough for the course-demo payment flow.
     reservation = models.OneToOneField(
         Reservation,
         on_delete=models.CASCADE,
@@ -207,6 +211,7 @@ class Payment(models.Model):
         return f'{self.payment_no} - {self.amount}'
 
     def save(self, *args, **kwargs):
+        # Generate a stable payment number before the row is written.
         if not self.payment_no:
             self.payment_no = uuid4().hex
         return super().save(*args, **kwargs)

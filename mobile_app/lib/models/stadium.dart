@@ -5,6 +5,7 @@ class Stadium {
     required this.address,
     required this.phoneNumber,
     required this.information,
+    this.coverImageUrl = '',
     this.auditStatus = '',
     this.isOpen = false,
     this.deletionRequested = false,
@@ -19,6 +20,7 @@ class Stadium {
   final String address;
   final String phoneNumber;
   final String information;
+  final String coverImageUrl;
   final String auditStatus;
   final bool isOpen;
   final bool deletionRequested;
@@ -27,6 +29,10 @@ class Stadium {
   final String createdAt;
   final String updatedAt;
 
+  bool get isPubliclyVisible {
+    return auditStatus == 'approved' && isOpen && !deletionRequested;
+  }
+
   factory Stadium.fromJson(Map<String, dynamic> json) {
     return Stadium(
       id: json['id'] as int,
@@ -34,6 +40,10 @@ class Stadium {
       address: json['address'] as String? ?? '',
       phoneNumber: json['phone_number'] as String? ?? '',
       information: json['information'] as String? ?? '',
+      coverImageUrl:
+          json['cover_image_url'] as String? ??
+          json['cover_image'] as String? ??
+          '',
       auditStatus: json['audit_status'] as String? ?? '',
       isOpen: json['is_open'] as bool? ?? false,
       deletionRequested: json['deletion_requested'] as bool? ?? false,
@@ -52,6 +62,7 @@ class StadiumDetail extends Stadium {
     required super.address,
     required super.phoneNumber,
     required super.information,
+    super.coverImageUrl = '',
     required this.fields,
   });
 
@@ -65,6 +76,10 @@ class StadiumDetail extends Stadium {
       address: json['address'] as String? ?? '',
       phoneNumber: json['phone_number'] as String? ?? '',
       information: json['information'] as String? ?? '',
+      coverImageUrl:
+          json['cover_image_url'] as String? ??
+          json['cover_image'] as String? ??
+          '',
       fields: fieldsJson
           .map((item) => StadiumField.fromJson(item as Map<String, dynamic>))
           .toList(),
