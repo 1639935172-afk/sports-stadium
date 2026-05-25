@@ -18,3 +18,4 @@ media/
 backups/
 *.sql
 *.dump
+.agents/
